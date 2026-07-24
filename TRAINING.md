@@ -4,37 +4,45 @@ Local workflow for training the MIRA world model on RacerX playtest data — bot
 **warm-starting** (finetune) from the published `alakazam-mira-mini` weights and
 training **from scratch** (codec and/or world model). This is **not** part of the PyPI
 package (see [README.md](README.md) for playing the released model) — it documents the
-local train/eval loop on the 5090 box.
+local train/eval loop.
 
 - **Finetune** (recommended single-GPU path) → "Launch a finetune" below.
 - **From scratch** (codec, WM, or both) → "Training from scratch" below.
 
-Three moving parts, three repos:
+## Placeholders
 
-| repo | role |
+Paths below use these placeholders — substitute your own checkout / cache locations
+(the bats already hardcode them, so you rarely type these by hand):
+
+| placeholder | what it is |
 |---|---|
-| `C:\workspace\world\alakazam-mira-mini` | **weights source** + the runner bats below |
-| `C:\workspace\world\mira` | the **trainer** (`scripts/train_world_model.py`, `finetune.bat`, `smoke_test.bat`) |
-| `C:\workspace\REMIX\racer-x\tools\replay-processing` | the **RacerX→mira data pipeline** (`scripts\*.bat`) |
+| `<mini>` | this repo (`alakazam-mira-mini`) — weights source + runner bats |
+| `<mira>` | the mira trainer repo (`train_world_model.py`, `finetune.bat`, `smoke_test.bat`) |
+| `<rx>` | the RacerX data pipeline (`racer-x/tools/replay-processing`, bats under `scripts\`) |
+| `<rec>` | the recordings/output root (holds `mira_wds\`, `playtests\`, `mira\`) |
+| `<hf>` | the Hugging Face cache (`~/.cache/huggingface/hub`) |
+| `<snap>` | the downloaded snapshot dir under `<hf>/models--alakazamworld--mira-mini/snapshots/` |
 
-## Runner bats (this repo)
+Run each bat from its own repo (paths inside are relative to that repo).
+
+## Runner bats (`<mini>`)
 
 | bat | what it does |
 |---|---|
 | `run_mira.bat` | launch the released model to *play* in the browser |
 | `download_weights.bat [1b\|364m\|all]` | pre-download weights into the HF cache (default `1b`) |
-| `tensorboard.bat [logdir] [port]` | serve TensorBoard for training runs (default `C:\recordings\mira_wds` on :6006) |
+| `tensorboard.bat [logdir] [port]` | serve TensorBoard for training runs (default `<rec>\mira_wds` on :6006) |
 
 ## Which model to download for finetuning
 
-**`alakazamworld/mira-mini`** (the `1b` — right for the RTX 5090):
+**`alakazamworld/mira-mini`** (the `1b` — right for a discrete GPU / RTX 5090):
 
 ```
 download_weights.bat 1b
 ```
 
-That one repo bundles **both** checkpoints the world-model trainer needs (paths are
-inside the HF cache snapshot `...\models--alakazamworld--mira-mini\snapshots\19d668ac...`):
+That one repo bundles **both** checkpoints the world-model trainer needs, under
+`<snap>` (i.e. `<hf>/models--alakazamworld--mira-mini/snapshots/<snap>/`):
 
 - **World model** (finetune *from* this): `checkpoint-52000/checkpoint.pth`
 - **Codec** (RAEv2, required to operate on latents; stays frozen): `codec/checkpoint-125000/checkpoint.pth`
@@ -43,9 +51,9 @@ inside the HF cache snapshot `...\models--alakazamworld--mira-mini\snapshots\19d
 
 ## Launch a finetune
 
-The mira trainer's `smoke_test.bat` already wires the codec checkpoint and the RacerX
-index; it warm-starts from `checkpoint-52000` via `finetune_from`. From
-`C:\workspace\world\mira`:
+From `<mira>`, `smoke_test.bat` already wires the codec checkpoint and the RacerX
+index, and warm-starts from `checkpoint-52000` via `finetune_from` (see `finetune.bat`,
+which hardcodes the `<snap>` path so you don't type it):
 
 ```
 smoke_test.bat                                          200-step smoke, validate first
@@ -53,11 +61,11 @@ smoke_test.bat run.steps=50                             shorter
 smoke_test.bat validation.val_n_samples=8 world_model_metrics.num_samples=16   fast (see below)
 ```
 
-To warm-start from the checkpoint explicitly through `train_wm_smoke.bat` (in the
-racer-x `scripts\` dir) instead:
+To warm-start explicitly through `<rx>\scripts\train_wm_smoke.bat` instead, point
+`run.continue_from` at the checkpoint under `<snap>`:
 
 ```
-scripts\train_wm_smoke.bat 50 run.continue_from=C:/Users/kschmid/.cache/huggingface/hub/models--alakazamworld--mira-mini/snapshots/19d668ac39814e394ae4a8f698690f761facf437/checkpoint-52000/checkpoint.pth
+train_wm_smoke.bat 50 run.continue_from=<snap>/checkpoint-52000/checkpoint.pth
 ```
 
 - `finetune_from` = load **model weights only** (fresh optimizer/step counter) — a warm start.
@@ -76,7 +84,7 @@ either finetune the WM (above) or train it from scratch on that codec.
 `finetune.bat` = `train.bat` + `run.finetune_from`. So **`train.bat` on its own IS the
 from-scratch WM launcher** — `finetune_from`/`continue_from` both default to `null`, so
 the 1.3 B DiT starts random-initialized. It still loads the released mira-mini codec
-(`checkpoint-125000`, frozen) to turn frames into latents. From `C:\workspace\world\mira`:
+(`checkpoint-125000`, frozen) to turn frames into latents. From `<mira>`:
 
 ```
 get_data.bat                       once: writes data_paths.bat (TRAIN_INDEX/TEST_INDEX)
@@ -89,7 +97,7 @@ Scaling knobs (train.bat header):
 - 4-player: append `model=multi_wrapper_world_model dataset.n_players=4`
 
 Point it at RacerX instead of the default rocket-science index by appending
-`dataset.train_index=C:/recordings/mira_wds/train/index.json dataset.test_index=...`
+`dataset.train_index=<rec>/mira_wds/train/index.json dataset.test_index=...`
 (or use `smoke_test.bat`, which already defaults to the RacerX index).
 
 > From-scratch WM needs **far more data/steps** than a finetune to reach the same
@@ -99,23 +107,23 @@ Point it at RacerX instead of the default rocket-science index by appending
 
 ### 2. Codec from scratch (RAEv2: DINOv3 encoder + learned decoder)
 
-The codec is trained by `scripts/train_codec.py`. The from-scratch entry is
-`train_mira_smoke.bat` in the RacerX `scripts\` dir (no external checkpoint needed).
-Prereqs: the **Meta-gated DINOv3-L/16** backbone at
-`C:\workspace\world\mira\dino_weights\dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth`
-(or set `RS_DINO_WEIGHTS_DIR`), and a free GPU.
+The codec is trained by `<mira>\scripts\train_codec.py`. The from-scratch entry is
+`train_mira_smoke.bat` in `<rx>\scripts\` (no external checkpoint needed). Prereqs: the
+**Meta-gated DINOv3-L/16** backbone at
+`<mira>\dino_weights\dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth` (or set
+`RS_DINO_WEIGHTS_DIR`), and a free GPU.
 
 ```
-C:\workspace\REMIX\racer-x\tools\replay-processing\scripts\train_mira_smoke.bat 50
-C:\workspace\REMIX\racer-x\tools\replay-processing\scripts\train_mira_smoke.bat 20000 run.batch_size=2
+train_mira_smoke.bat 50
+train_mira_smoke.bat 20000 run.batch_size=2
 ```
 
-Output codec checkpoint lands at
-`C:/recordings/mira_wds/codec_smoke/checkpoint-*/checkpoint.pth`. Feed it to the WM
-trainer to train the world model on **your own** codec instead of mira-mini's:
+Output codec checkpoint lands at `<rec>/mira_wds/codec_smoke/checkpoint-*/checkpoint.pth`.
+Feed it to the WM trainer to train the world model on **your own** codec instead of
+mira-mini's:
 
 ```
-train.bat model.architecture.config.codec_checkpoint=C:/recordings/mira_wds/codec_smoke/checkpoint-XXXX/checkpoint.pth run.steps=20000
+train.bat model.architecture.config.codec_checkpoint=<rec>/mira_wds/codec_smoke/checkpoint-XXXX/checkpoint.pth run.steps=20000
 ```
 
 ### Full from-scratch pipeline (both models)
@@ -140,12 +148,12 @@ step 1, which stalls for ~1–3 GPU-hours before any TensorBoard scalar appears 
 ## TensorBoard
 
 Logging is ON by default (`tensorboard.logdir=${run.output_dir}/tb`). `smoke_test.bat`
-writes to `C:\workspace\world\mira\train_world_model_logs\`; the racer-x smoke bats
-write under `C:\recordings\mira_wds\{codec_smoke,wm_smoke}\`.
+writes to `<mira>\train_world_model_logs\`; the racer-x smoke bats write under
+`<rec>\mira_wds\{codec_smoke,wm_smoke}\`.
 
 ```
-tensorboard.bat                                              serve C:\recordings\mira_wds :6006
-tensorboard.bat C:\workspace\world\mira\train_world_model_logs   the smoke_test run
+tensorboard.bat                                    serve <rec>\mira_wds :6006
+tensorboard.bat <mira>\train_world_model_logs      the smoke_test run
 ```
 
 Uses mira's `.venv\Scripts\tensorboard.exe` (`python -m tensorboard` has no `__main__`).
@@ -179,9 +187,8 @@ RacerX playtest → mira WebDataset. Current state:
 - All 663 clips have npz + physics + mira samples; **video mp4 encodes are the gate**
   (disk-bounded `stream_video`). Only clips with a `video_720p.mp4` become trainable latents.
 - Full capture ≈ **42 h** of gameplay @ 20 fps (663 clips); trainable subset grows as encodes land.
-- Build/refresh + validate the WebDataset:
-  `C:\workspace\REMIX\racer-x\tools\replay-processing\scripts\rebuild_dataset.bat`
-- Index consumed by the trainer: `C:\recordings\mira_wds\train\index.json`
+- Build/refresh + validate the WebDataset: `<rx>\scripts\rebuild_dataset.bat`
+- Index consumed by the trainer: `<rec>\mira_wds\train\index.json`
 
-> Finetuning on a *few* clips overfits fast — wait for more of the 635 pending mp4
+> Finetuning on a *few* clips overfits fast — wait for more of the pending mp4
 > encodes before a real (non-smoke) run.
