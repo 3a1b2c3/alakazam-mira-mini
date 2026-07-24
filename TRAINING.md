@@ -17,13 +17,16 @@ Paths below use these placeholders — substitute your own checkout / cache loca
 | placeholder | what it is |
 |---|---|
 | `<mini>` | this repo (`alakazam-mira-mini`) — weights source + runner bats |
-| `<mira>` | the mira trainer repo (`train_world_model.py`, `finetune.bat`, `smoke_test.bat`) |
+| `<mira>` | the mira trainer repo — `.venv`, `scripts/train_world_model.py`, configs. **Sibling of `<mini>`.** |
 | `<rx>` | the RacerX data pipeline (`racer-x/tools/replay-processing`, bats under `scripts\`) |
 | `<rec>` | the recordings/output root (holds `mira_wds\`, `playtests\`, `mira\`) |
 | `<hf>` | the Hugging Face cache (`~/.cache/huggingface/hub`) |
 | `<snap>` | the downloaded snapshot dir under `<hf>/models--alakazamworld--mira-mini/snapshots/` |
 
-Run each bat from its own repo (paths inside are relative to that repo).
+**All `.bat` launchers live in `<mini>` (this repo).** They derive the sibling mira repo
+relatively (`%~dp0..\mira`) — no absolute repo paths — so you run them from `<mini>` while
+they operate on `<mira>`'s `.venv`/`scripts`/configs (which `setup.bat` creates there). The
+`.sh` equivalents stay in `<mira>` for cluster use.
 
 ## Runner bats (`<mini>`)
 
@@ -32,6 +35,13 @@ Run each bat from its own repo (paths inside are relative to that repo).
 | `run_mira.bat` | launch the released model to *play* in the browser |
 | `download_weights.bat [1b\|364m\|all]` | pre-download weights into the HF cache (default `1b`) |
 | `tensorboard.bat [logdir] [port]` | serve TensorBoard for training runs (default `<rec>\mira_wds` on :6006) |
+| `setup.bat` | create `<mira>\.venv` (uv, py3.11, cu128 torch) + editable mira install |
+| `get_data.bat` | download rocket-science shards + write `<mira>\data_paths.bat` |
+| `download_models.bat` | download the rocket-science dataset into the HF cache |
+| `train.bat` | train the world model on the frozen codec (from scratch by default) |
+| `finetune.bat` | `train.bat` + `run.finetune_from` (warm-start from `checkpoint-52000`) |
+| `smoke_test.bat` | short warm-start run on the RacerX index (validate-first) |
+| `smoke_test_all.bat` | run + PASS/FAIL every training path (see "Smoke-test every path") |
 
 ## Which model to download for finetuning
 
@@ -51,8 +61,8 @@ That one repo bundles **both** checkpoints the world-model trainer needs, under
 
 ## Launch a finetune
 
-From `<mira>`, `smoke_test.bat` already wires the codec checkpoint and the RacerX
-index, and warm-starts from `checkpoint-52000` via `finetune_from` (see `finetune.bat`,
+From `<mini>` (all bats live here), `smoke_test.bat` already wires the codec checkpoint
+and the RacerX index, and warm-starts from `checkpoint-52000` via `finetune_from` (see `finetune.bat`,
 which hardcodes the `<snap>` path so you don't type it):
 
 ```
@@ -84,7 +94,7 @@ either finetune the WM (above) or train it from scratch on that codec.
 `finetune.bat` = `train.bat` + `run.finetune_from`. So **`train.bat` on its own IS the
 from-scratch WM launcher** — `finetune_from`/`continue_from` both default to `null`, so
 the 1.3 B DiT starts random-initialized. It still loads the released mira-mini codec
-(`checkpoint-125000`, frozen) to turn frames into latents. From `<mira>`:
+(`checkpoint-125000`, frozen) to turn frames into latents. From `<mini>`:
 
 ```
 get_data.bat                       once: writes data_paths.bat (TRAIN_INDEX/TEST_INDEX)
@@ -135,6 +145,111 @@ train.bat model.architecture.config.codec_checkpoint=<rec>/mira_wds/codec_smoke/
 
 Only do this to reproduce MIRA end-to-end; for RacerX experiments, the released codec +
 a WM finetune is cheaper and better on limited data.
+
+## Smoke-test every path
+
+`<mira>` ships a suite that runs all five runnable paths (data-loader test, codec from
+scratch, WM finetune, WM from scratch, full codec→WM chain), each **capped** so it
+reaches a checkpoint in minutes, and reports PASS/FAIL by verifying each run actually
+**wrote a checkpoint** (exit 0 alone isn't enough — a run can 0-exit after a stalled
+validation). It runs all steps even if one fails.
+
+Windows:
+```
+smoke_test_all.bat            full suite (20 steps each)
+smoke_test_all.bat 10         fewer steps
+```
+
+Linux / WSL / cluster (env-driven paths, uses `pixi run --frozen`):
+```bash
+DATA_INDEX=<rec>/mira_wds/train/index.json OUT=<rec>/mira_wds \
+CODEC=<snap>/codec/checkpoint-125000/checkpoint.pth WM=<snap>/checkpoint-52000/checkpoint.pth \
+RS_DINO_WEIGHTS_DIR=<dino> ./smoke_test_all.sh
+```
+
+Output ends with a summary like:
+```
+  1 data loader test ......... PASS
+  2 codec from scratch ....... PASS
+  3 world model finetune ..... PASS
+  4 world model from scratch . PASS
+  5 full chain (codec->WM) ... PASS
+```
+Steps skip cleanly (`SKIP`) if their prereq env var is unset (e.g. no `RS_DINO_WEIGHTS_DIR`
+→ codec step skipped). Run `smoke_test_all.sh` via `sbatch` to also exercise the SLURM path.
+
+## Linux wrapper scripts
+
+The `.bat` launchers are Windows-only. `<mira>` also has `.sh` equivalents for Linux/WSL/
+cluster use (env-driven, no hardcoded paths, `pixi run --frozen` by default):
+
+| script | mirrors | required env |
+|---|---|---|
+| `train_codec.sh` | `train_mira_smoke.bat` (codec from scratch) | `DATA_INDEX`, `RS_DINO_WEIGHTS_DIR` |
+| `train.sh` | `train.bat`/`finetune.bat` (world model) | `DATA_INDEX`, `CODEC`; set `WM=` to warm-start |
+| `smoke_test_all.sh` | `smoke_test_all.bat` (full suite) | `DATA_INDEX`, `OUT` (+ `CODEC`/`WM`/`RS_DINO_WEIGHTS_DIR` per step) |
+
+```bash
+# codec from scratch
+DATA_INDEX=<rec>/mira_wds/train/index.json RS_DINO_WEIGHTS_DIR=<dino> ./train_codec.sh run.steps=20000
+
+# WM from scratch (omit WM) or finetune (set WM=)
+DATA_INDEX=<rec>/mira_wds/train/index.json CODEC=<snap>/codec/checkpoint-125000/checkpoint.pth \
+  WM=<snap>/checkpoint-52000/checkpoint.pth ./train.sh run.steps=5000
+```
+
+Override the env prefix with `RUN=""` (torch on PATH) or `RUN="source .venv/bin/activate &&"`.
+Extra Hydra overrides pass straight through (`"$@"`).
+
+## Run on SLURM
+
+Single-GPU/Windows is the local path; to scale out, `<mira>\train.sbatch` is a minimal
+launcher wrapping `torchrun` (single-node multi-GPU **and** multi-node via c10d
+rendezvous). No Docker needed — env comes from the repo's `pixi`. Requires Linux + NCCL.
+
+### End-to-end steps
+
+1. **Code + env** (Linux login node, for NCCL):
+   ```bash
+   git clone <mira-repo-url> mira && cd mira
+   export PATH="$HOME/.pixi/bin:$PATH"     # if pixi isn't already on PATH
+   pixi install --locked                    # solve + download the env ONCE (no network at job time)
+   ```
+2. **Data + checkpoints** onto the cluster (scp/rsync from the workstation, or re-download):
+   - WebDataset: `mira_wds/train/index.json` + shard tar  →  `<rec>/mira_wds/train`
+   - Codec + WM checkpoints: `pixi run huggingface-cli download alakazamworld/mira-mini`
+     (gives `<snap>/codec/checkpoint-125000` and `<snap>/checkpoint-52000`)
+   - DINOv3-L/16 weights (codec step only)  →  set `RS_DINO_WEIGHTS_DIR=<dino>`
+3. **Smoke-test all paths first** (submit the suite; confirm all 5 rows PASS before a real run):
+   ```bash
+   DATA_INDEX=<rec>/mira_wds/train/index.json OUT=<rec>/mira_wds \
+   CODEC=<snap>/codec/checkpoint-125000/checkpoint.pth WM=<snap>/checkpoint-52000/checkpoint.pth \
+   RS_DINO_WEIGHTS_DIR=<dino> sbatch --wrap="./smoke_test_all.sh"
+   ```
+4. **Real training** via `train.sbatch` (edit the four `#SBATCH` resource lines first) — see below.
+5. **Scale + monitor:** multi-node is just `#SBATCH --nodes=N` (rendezvous is automatic);
+   watch with `squeue`, `tail -f slurm-<jobid>.out`, and TensorBoard on the run's `output_dir/tb`.
+
+```bash
+# once on the login node (solve + download the env, no network at job time):
+pixi install --locked
+
+# world model (add run.finetune_from=<snap>/checkpoint-52000/checkpoint.pth to warm-start):
+CODEC=<snap>/codec/checkpoint-125000/checkpoint.pth \
+TRAIN=<rec>/mira_wds/train/index.json TEST=<rec>/mira_wds/test/index.json \
+  sbatch train.sbatch run.steps=20000 run.batch_size=2
+
+# codec from scratch:
+ENTRY=scripts/train_codec.py RS_DINO_WEIGHTS_DIR=<dino> TRAIN=... TEST=... sbatch train.sbatch
+```
+
+- Edit the four `#SBATCH` lines (`--nodes`, `--gpus-per-node`, `--cpus-per-task`, `--time`);
+  multi-node just needs `--nodes=N` — rendezvous is automatic.
+- Extra Hydra overrides pass straight through (`$*`).
+- `pixi` must be on the **compute nodes'** PATH (the sbatch adds `~/.pixi/bin`), and
+  `.pixi/envs/` must sit on a **shared filesystem** all nodes can read. Pre-solve once with
+  `pixi install --locked`; the job uses `pixi run --frozen` so it never re-solves.
+- Override the env prefix with `RUN=""` (torchrun on PATH) or `RUN="source .venv/bin/activate &&"`.
 
 ### Validation is the upfront cost
 

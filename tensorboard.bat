@@ -11,7 +11,7 @@ REM   tensorboard.bat                 -> serve C:\recordings\mira_wds on :6006
 REM   tensorboard.bat <logdir>        custom logdir
 REM   tensorboard.bat <logdir> <port> custom logdir + port
 REM ==========================================================================
-set "TB=C:\workspace\world\mira\.venv\Scripts\tensorboard.exe"
+set "TB=%~dp0..\mira\.venv\Scripts\tensorboard.exe"
 if not exist "%TB%" ( echo ERROR: tensorboard.exe not found at %TB% - is mira's .venv set up? & exit /b 1 )
 
 set "LOGDIR=%~1"
