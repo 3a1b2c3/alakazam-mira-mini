@@ -130,5 +130,7 @@ def _localize_config(root: Path) -> None:
     s = cfgf.read_text()
     hits = sorted(root.glob("codec/checkpoint-*/checkpoint.pth"))
     if hits:
-        s = re.sub(r"codec_checkpoint: \S+", f"codec_checkpoint: {hits[-1]}", s)
+        # Use a function repl so backslashes in a Windows path (e.g. \Users) are
+        # NOT interpreted as regex escapes (re.error: bad escape \U).
+        s = re.sub(r"codec_checkpoint: \S+", lambda _m: f"codec_checkpoint: {hits[-1]}", s)
         cfgf.write_text(s)
