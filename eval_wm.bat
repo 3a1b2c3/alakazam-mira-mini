@@ -12,7 +12,7 @@ REM DINO/Inception = gFDD/gFID-analogs). Capped small by default for speed --
 REM raise --num-samples / --val-n-samples for a real (slow) eval.
 REM
 REM Usage:
-REM   eval_wm.bat                          DEFAULT: newest WM checkpoint on disk
+REM   eval_wm.bat                          DEFAULT: newest local RacerX WM checkpoint
 REM   eval_wm.bat <checkpoint.pth>         a specific checkpoint
 REM   eval_wm.bat <ckpt> --num-samples 256 --val-n-samples 128     (fuller eval)
 REM   eval_wm.bat <ckpt> --viz 4                                    (also render 4 rollouts)
@@ -82,19 +82,34 @@ if not exist "%VITB16%" (
     set "AUTOSKIP=--skip-metrics"
 )
 
+REM Eval on the RacerX WebDataset (released checkpoints bake the author's absolute data paths
+REM into their config; --test-index overrides that). Only add it when the index exists, so a
+REM local checkpoint's own valid config still wins if RacerX isn't built. User --test-index in
+REM the extra args overrides this (last wins).
+set "TESTIDX=C:/recordings/mira_wds/train/index.json"
+set "IDXARG="
+if exist "C:\recordings\mira_wds\train\index.json" set "IDXARG=--test-index %TESTIDX%"
+
 REM small caps by default so a smoke checkpoint evals in minutes; override by
 REM passing your own --num-samples / --val-n-samples in the extra args (last wins).
-"%PY%" scripts\eval_world_model_offline.py "%CKPT%" --num-samples 16 --val-n-samples 8 %AUTOSKIP% %EXTRA%
+"%PY%" scripts\eval_world_model_offline.py "%CKPT%" %IDXARG% --num-samples 16 --val-n-samples 8 %AUTOSKIP% %EXTRA%
 endlocal
 goto :eof
 
-REM --- DEFAULT = newest WM checkpoint = highest checkpoint-<N> under %REC%\wm_* .
+REM --- DEFAULT = newest WM checkpoint from a LOCAL RacerX run = highest checkpoint-<N> under
+REM     %REC%\wm_* . NOTE: the released reference (checkpoint-52000) can NOT be the default --
+REM     it's a Rocket League model with video.timesteps=80 (needs 160-frame clips), so it fails
+REM     on RacerX's 80-frame chunks AND its numbers on RacerX would be domain-mismatched garbage.
+REM     Only RacerX-trained checkpoints (timesteps=40 -> clip_len 80) eval on this data.
 REM     'checkpoint-*' skips in-progress '.checkpoint-N.tmp' dirs; 'wm_*' skips the codec.
-REM     WM output dirs carry world_model_config.yaml, which this eval requires.
 :pickdefault
 set /a BEST=-1
 for /d %%R in ("%REC%\wm_*") do for /d %%D in ("%%R\checkpoint-*") do call :consider "%%D"
-if defined CKPT echo default checkpoint ^(newest WM^): "%CKPT%"
+if defined CKPT (
+    echo default checkpoint ^(newest local RacerX WM^): "%CKPT%"
+) else (
+    echo ERROR: no RacerX WM checkpoint under %REC%\wm_* -- run a training first, or pass a path.
+)
 goto :eof
 
 :consider

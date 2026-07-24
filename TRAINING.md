@@ -92,7 +92,9 @@ either finetune the WM (above) or train it from scratch on that codec.
 ### 1. World model from scratch (random-init DiT, frozen mira-mini codec)
 
 `finetune.bat` = `train.bat` + `run.finetune_from`. So **`train.bat` on its own IS the
-from-scratch WM launcher** — `finetune_from`/`continue_from` both default to `null`, so
+from-scratch WM launcher** — `fine
+
+tune_from`/`continue_from` both default to `null`, so
 the 1.3 B DiT starts random-initialized. It still loads the released mira-mini codec
 (`checkpoint-125000`, frozen) to turn frames into latents. From `<mini>`:
 
@@ -294,6 +296,61 @@ batch 1, `compile=false`.
 **Eval metrics:** autoregressive rollout — seed 38 frames, generate 20, measure **drift**
 (divergence over 20 frames) and **FDD** (Fréchet distance of generated vs real latents),
 plus 8 decoded viz clips.
+
+## Reference values (what "good" looks like)
+
+Absolute targets from the **MIRA Mini technical report** (Alakazam's 1B reproduction of MIRA
+on Rocket League). **Caveat:** these are *Rocket League* numbers — RacerX values will differ, so
+treat them as **scale anchors + trajectory shapes**, not literal pass marks. What transfers is the
+*shape* (monotone val-loss descent, metrics improving over steps) and the *gates*.
+
+**Codec** (125k steps, eval on 2,048 held-out clips, full-frame LPIPS-AlexNet):
+
+| metric | reproduction @125k | paper @125k | gate |
+|---|---|---|---|
+| PSNR ↑ | 28.59 | 29.7 | "within 2 dB" → pass |
+| SSIM ↑ | 0.867 | 0.891 | — |
+| LPIPS-Alex ↓ | 0.068 | 0.051 | — |
+
+**Single-player world model** (1B, frozen codec, 80-frame clips):
+- Train loss: **9.39 from scratch** → warm-start opens at **0.70**.
+- Val loss (256 samples): **1.176 → 0.385** over 5k → 50k steps; stable ≈0.08 train-val gap = no overfit.
+- Generation @52k: **gFID 12.8** (paper 10.7 @100k), **gFDD 0.45** (paper 0.55 — lower=better), rollout **PSNR@4s 17.3**, **LPIPS@4s 0.32**.
+- FDD decomposition: WM-above-codec **0.21** < codec floor **0.26** → model is *codec-limited* (better codec is the next lever, not a bigger WM).
+
+**Multiplayer fine-tune** — val loss (256 samples), monotone, ≈0.08 gap:
+
+| step | 5k | 10k | 20k | 30k | 40k | 50k | 60k | 80k |
+|---|---|---|---|---|---|---|---|---|
+| val loss | 0.623 | 0.516 | 0.438 | 0.393 | 0.361 | 0.340 | 0.331 | 0.320 |
+
+**Controllability** (action authority = seed-controlled action-divergence @1 s; ~0.30 = felt-agency band):
+- SP ladder @1s: action-deaf ≤10k, inflects 10k→20k, climbs to **0.51** @45k.
+- Paper's ARR (1B): **0.63 @25k → 0.85 @50k → 0.90 @100k** — controllability converges *after* visual quality.
+
+**How to use these:** run validation at step 0 (`val_first=true`) to get your RacerX baseline, then
+confirm loss descends monotonically and eval metrics move the right way (↓ drift/FDD/LPIPS,
+↑ PSNR/SSIM). The report's gate discipline is the model: pick a numeric go/no-go per phase
+(e.g. codec "within 2 dB PSNR of the reference codec") rather than chasing an absolute value.
+
+### Go/no-go gates (score before spending on the next phase)
+
+Adapted from the report's R3 rule ("numeric gates before the next phase's GPUs are rented").
+Because RacerX has no published reference table, most gates are **trajectory/relative**, not absolute.
+
+| phase | launcher | GO gate (proceed if…) | NO-GO (stop & fix if…) |
+|---|---|---|---|
+| **0. Data** | `test_mira_dataset` | PASS: frame counts match, action decoding matches source | any chunk-frame or action mismatch |
+| **1. Smoke (all paths)** | `smoke_test_all` | every path writes a checkpoint; loss finite & trending down | NaN/Inf loss, no checkpoint, or a path errors |
+| **2. Codec** | `train_codec` | recon loss descends; `latent_mean≈0`, `latent_std` stable (no collapse/explosion); (if comparing) PSNR within 2 dB of reference | loss flat/rising, latent std →0 or blows up |
+| **3. World model** | `train`/`finetune` | val loss **monotone** ↓ with stable train-val gap; eval `drift`/`FDD`/`LPIPS` ↓ and `PSNR`/`SSIM` ↑ **vs the step-0 baseline** | val loss plateaus/rises early, or train↓ while eval↑ (overfit — need more clips) |
+| **4. Playability (R5)** | hands-on (`run_mira`) | coherent world ≥1 s, objects persist, action response present | world dissolves, objects vanish, no steering response |
+
+Two RacerX-specific notes:
+- **Overfit is expected** at ~2 h of data — phase 3's NO-GO (train↓/eval↑) will trip until more
+  clips encode. That's the gate telling you to wait for data, not a code bug.
+- **Codec is usually the binding constraint** (report §4/§5): if WM eval saturates, improve/retrain
+  the codec before scaling the world model.
 
 ## Data
 
