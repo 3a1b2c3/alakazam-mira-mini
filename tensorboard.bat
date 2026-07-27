@@ -3,8 +3,8 @@ setlocal enableextensions
 REM ==========================================================================
 REM Launch TensorBoard for MIRA training runs. Reads the scalar logs the
 REM trainer writes (tensorboard.logdir=${run.output_dir}/tb, ON by default).
-REM Points at the parent C:\recordings\mira_wds so BOTH codec_smoke\tb and
-REM wm_smoke\tb (and any other run dir) show up as separate runs.
+REM Points at the parent C:\recordings\mira_wds so every run dir (e.g.
+REM wm_racerx_ft\tb) shows up as a separate TensorBoard run.
 REM Uses mira's .venv tensorboard.exe (python -m tensorboard has no __main__).
 REM Usage:
 REM   tensorboard.bat                 -> serve C:\recordings\mira_wds on :6006

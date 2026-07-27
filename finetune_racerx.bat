@@ -34,16 +34,25 @@ set "WM=%WM:\=/%"
 set "STEPS=%~1"
 if "%STEPS%"=="" set "STEPS=10000"
 
+REM AUTO-RESUME: if a checkpoint already exists in the output dir, CONTINUE from it (restores
+REM optimizer + step counter -> picks up where a killed run left off); else warm-start from the
+REM mira-mini WM. keep_recent=1 means at most one checkpoint dir exists.
+set "OUTDIR=%REC%\wm_racerx_ft"
+set "RESUME="
+for /d %%D in ("%OUTDIR%\checkpoint-*") do if exist "%%D\checkpoint.pth" set "RESUME=%%D\checkpoint.pth"
+if defined RESUME set "RESUME=%RESUME:\=/%"
+if defined RESUME ( set "STARTARG=run.continue_from=%RESUME%" ) else ( set "STARTARG=run.finetune_from=%WM%" )
+
 REM single-GPU: clear stray torchrun env (Windows has no NCCL)
 set "LOCAL_RANK=" & set "RANK=" & set "WORLD_SIZE=" & set "MASTER_ADDR=" & set "MASTER_PORT="
 cd /d "%MIRA%"
 echo GPU free:
 nvidia-smi --query-gpu=memory.free --format=csv,noheader
 echo codec      = %CODEC%
-echo warm-start = %WM%
+echo start      = %STARTARG%
 echo train      = %RECF%/train/index.json
 echo test       = %TESTIDX%
 echo output     = %RECF%/wm_racerx_ft  (%STEPS% steps)
 echo.
-"%MIRA%\.venv\Scripts\python.exe" scripts\train_world_model.py model.architecture.config.codec_checkpoint="%CODEC%" run.finetune_from="%WM%" dataset.train_index=%RECF%/train/index.json dataset.test_index=%TESTIDX% run.batch_size=1 run.compile=false wandb.mode=offline dataloader.num_workers=0 run.steps=%STEPS% run.output_dir=%RECF%/wm_racerx_ft validation.val_n_samples=64 world_model_metrics.num_samples=128 %2 %3 %4 %5 %6
+"%MIRA%\.venv\Scripts\python.exe" scripts\train_world_model.py model.architecture.config.codec_checkpoint="%CODEC%" %STARTARG% dataset.train_index=%RECF%/train/index.json dataset.test_index=%TESTIDX% run.batch_size=1 run.compile=false wandb.mode=offline dataloader.num_workers=0 run.steps=%STEPS% run.output_dir=%RECF%/wm_racerx_ft validation.val_n_samples=64 world_model_metrics.num_samples=128 %2 %3 %4 %5 %6
 endlocal

@@ -25,11 +25,10 @@ BATCH="${BATCH:-2}"                  # per-GPU; effective batch = BATCH * NPROC
 WORKERS="${WORKERS:-1}"             # keep low: shards-per-rank is small
 HF_REPO="${HF_REPO:-alakazamworld/mira-mini}"
 
-# ---- data ------------------------------------------------------------------
-: "${RX_ROOT:?set RX_ROOT=/path/to/mira_wds (holds train/index.json)}"
-TRAIN="$RX_ROOT/train/index.json"
-[ -f "$TRAIN" ] || { echo "ERROR: no train index at $TRAIN -- build/upload the WebDataset first"; exit 1; }
-TEST="$RX_ROOT/test/index.json"; [ -f "$TEST" ] || TEST="$TRAIN"   # reuse train if no held-out split
+# ---- data source: provide EITHER a local RX_ROOT (dir with train/index.json) OR HF_DATA_REPO
+# to pull the racer-x WebDataset from a (private) HF dataset -- the Horde-friendly path. Upload it
+# once from your box with alakazam-mira-mini/upload_racerx_data.bat, re-run as shards grow.
+DATA_REPO="${HF_DATA_REPO:-}"
 
 # ---- pixi + locked env (pixi.lock is linux-64; lives in the mira repo) ------
 command -v pixi >/dev/null 2>&1 || { echo "== install pixi =="; curl -fsSL https://pixi.sh/install.sh | bash; }
@@ -37,6 +36,20 @@ export PATH="$HOME/.pixi/bin:$PATH"
 cd "$mira"
 echo "== pixi install --locked =="
 pixi install --locked
+
+# ---- data: local RX_ROOT if it has the shards, else pull HF_DATA_REPO (needs pixi for HF) ----
+if [ -z "${RX_ROOT:-}" ] || [ ! -f "$RX_ROOT/train/index.json" ]; then
+  [ -n "$DATA_REPO" ] || { echo "ERROR: set RX_ROOT=/path/to/mira_wds (with train/index.json), or HF_DATA_REPO=user/racerx-mira-wds to pull it"; exit 1; }
+  echo "== fetch racer-x WebDataset from HF dataset $DATA_REPO =="
+  RX_ROOT="$(pixi run python - <<PY
+from huggingface_hub import snapshot_download
+print(snapshot_download("$DATA_REPO", repo_type="dataset"))
+PY
+)"
+fi
+TRAIN="$RX_ROOT/train/index.json"
+[ -f "$TRAIN" ] || { echo "ERROR: no train index at $TRAIN after data fetch"; exit 1; }
+TEST="$RX_ROOT/test/index.json"; [ -f "$TEST" ] || TEST="$TRAIN"   # reuse train if no held-out split
 
 # ---- checkpoints: CODEC/WM if set, else fetch the mira-mini bundle ----------
 if [ -z "${CODEC:-}" ] || { [ "${SCRATCH:-0}" != "1" ] && [ -z "${WM:-}" ]; }; then
@@ -51,12 +64,18 @@ PY
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found: $CODEC"; exit 1; }
 
-FT=()
-if [ "${SCRATCH:-0}" = "1" ]; then
-  echo "mode: FROM SCRATCH (random-init DiT on the frozen codec)"
+# AUTO-RESUME: if a checkpoint already exists in the output dir, CONTINUE from it (restores
+# optimizer + step counter -> picks up a killed/pre-empted run); else warm-start from WM, or
+# start from scratch if SCRATCH=1. keep_recent=1 -> at most one checkpoint dir.
+OUT="${OUT:-$RX_ROOT/wm_racerx_ft}"
+CKPT="$(ls -d "$OUT"/checkpoint-*/ 2>/dev/null | sort -V | tail -1)"
+if [ -n "$CKPT" ] && [ -f "${CKPT}checkpoint.pth" ]; then
+  START=(run.continue_from="${CKPT}checkpoint.pth"); echo "mode: RESUME from ${CKPT}checkpoint.pth"
+elif [ "${SCRATCH:-0}" = "1" ]; then
+  START=(); echo "mode: FROM SCRATCH (random-init DiT on the frozen codec)"
 else
   [ -f "${WM:-}" ] || { echo "ERROR: warm-start ckpt not found: ${WM:-<unset>} (set SCRATCH=1 to train from scratch)"; exit 1; }
-  FT=(run.finetune_from="$WM"); echo "mode: FINETUNE from $WM"
+  START=(run.finetune_from="$WM"); echo "mode: FINETUNE from $WM"
 fi
 
 # ---- launch (torchrun fans out to all GPUs via NCCL; pixi supplies the env) -
@@ -65,6 +84,6 @@ echo "== torchrun --nproc_per_node=$NPROC  ($STEPS steps, batch ${BATCH}x${NPROC
 exec pixi run torchrun --nproc_per_node="$NPROC" scripts/train_world_model.py \
   model.architecture.config.codec_checkpoint="$CODEC" \
   dataset.train_index="$TRAIN" dataset.test_index="$TEST" \
-  run.batch_size="$BATCH" run.steps="$STEPS" \
+  run.batch_size="$BATCH" run.steps="$STEPS" run.output_dir="$OUT" \
   dataloader.num_workers="$WORKERS" wandb.mode=offline \
-  "${FT[@]}" "$@"
+  "${START[@]}" "$@"

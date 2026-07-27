@@ -28,15 +28,25 @@ set "CODEC=%CODEC:\=/%"
 set "STEPS=%~1"
 if "%STEPS%"=="" set "STEPS=20000"
 
+REM AUTO-RESUME: continue from an existing checkpoint in the output dir if present (restores
+REM optimizer + step counter -> picks up a killed run); else start FROM SCRATCH. keep_recent=1.
+set "OUTDIR=%REC%\wm_racerx"
+set "RESUME="
+for /d %%D in ("%OUTDIR%\checkpoint-*") do if exist "%%D\checkpoint.pth" set "RESUME=%%D\checkpoint.pth"
+if defined RESUME set "RESUME=%RESUME:\=/%"
+set "STARTARG="
+if defined RESUME set "STARTARG=run.continue_from=%RESUME%"
+
 REM single-GPU: clear stray torchrun env (Windows has no NCCL)
 set "LOCAL_RANK=" & set "RANK=" & set "WORLD_SIZE=" & set "MASTER_ADDR=" & set "MASTER_PORT="
 cd /d "%MIRA%"
 echo GPU free:
 nvidia-smi --query-gpu=memory.free --format=csv,noheader
 echo codec  = %CODEC%
+echo start  = %STARTARG%  (empty = from scratch)
 echo train  = %RECF%/train/index.json
 echo test   = %TESTIDX%
 echo output = %RECF%/wm_racerx  (%STEPS% steps)
 echo.
-"%MIRA%\.venv\Scripts\python.exe" scripts\train_world_model.py model.architecture.config.codec_checkpoint="%CODEC%" dataset.train_index=%RECF%/train/index.json dataset.test_index=%TESTIDX% run.batch_size=1 run.compile=false wandb.mode=offline dataloader.num_workers=0 run.steps=%STEPS% run.output_dir=%RECF%/wm_racerx %2 %3 %4 %5 %6
+"%MIRA%\.venv\Scripts\python.exe" scripts\train_world_model.py model.architecture.config.codec_checkpoint="%CODEC%" %STARTARG% dataset.train_index=%RECF%/train/index.json dataset.test_index=%TESTIDX% run.batch_size=1 run.compile=false wandb.mode=offline dataloader.num_workers=0 run.steps=%STEPS% run.output_dir=%RECF%/wm_racerx %2 %3 %4 %5 %6
 endlocal
