@@ -38,10 +38,14 @@ they operate on `<mira>`'s `.venv`/`scripts`/configs (which `setup.bat` creates 
 | `setup.bat` | create `<mira>\.venv` (uv, py3.11, cu128 torch) + editable mira install |
 | `get_data.bat` | download rocket-science shards + write `<mira>\data_paths.bat` |
 | `download_models.bat` | download the rocket-science dataset into the HF cache |
-| `train.bat` | train the world model on the frozen codec (from scratch by default) |
+| `train.bat` | low-level WM launcher on the frozen codec (from scratch; rocket-science data by default) |
 | `finetune.bat` | `train.bat` + `run.finetune_from` (warm-start from `checkpoint-52000`) |
-| `smoke_test.bat` | short warm-start run on the RacerX index (validate-first) |
+| **`train_racerx.bat [steps]`** | **real from-scratch** RacerX run (train+test split, resolved codec) → `wm_racerx` |
+| **`finetune_racerx.bat [steps]`** | **real finetune** RacerX run (warm-start `checkpoint-52000`) → `wm_racerx_ft` |
+| `smoke_finetune.bat` | short **finetune** smoke on RacerX (200 steps, capped validate-first) |
+| `smoke_scratch.bat` | short **from-scratch** smoke on RacerX (200 steps, capped) |
 | `smoke_test_all.bat` | run + PASS/FAIL every training path (see "Smoke-test every path") |
+| `train_racerx.sh` | Linux RacerX launcher (`RX_ROOT`+`CODEC`, `WM=` to finetune) |
 
 ## Which model to download for finetuning
 
@@ -61,14 +65,14 @@ That one repo bundles **both** checkpoints the world-model trainer needs, under
 
 ## Launch a finetune
 
-From `<mini>` (all bats live here), `smoke_test.bat` already wires the codec checkpoint
+From `<mini>` (all bats live here), `smoke_finetune.bat` already wires the codec checkpoint
 and the RacerX index, and warm-starts from `checkpoint-52000` via `finetune_from` (see `finetune.bat`,
 which hardcodes the `<snap>` path so you don't type it):
 
 ```
-smoke_test.bat                                          200-step smoke, validate first
-smoke_test.bat run.steps=50                             shorter
-smoke_test.bat validation.val_n_samples=8 world_model_metrics.num_samples=16   fast (see below)
+smoke_finetune.bat                                          200-step smoke, validate first
+smoke_finetune.bat run.steps=50                             shorter
+smoke_finetune.bat validation.val_n_samples=8 world_model_metrics.num_samples=16   fast (see below)
 ```
 
 To warm-start explicitly through `<rx>\scripts\train_wm_smoke.bat` instead, point
@@ -110,7 +114,7 @@ Scaling knobs (train.bat header):
 
 Point it at RacerX instead of the default rocket-science index by appending
 `dataset.train_index=<rec>/mira_wds/train/index.json dataset.test_index=...`
-(or use `smoke_test.bat`, which already defaults to the RacerX index).
+(or use `smoke_finetune.bat`, which already defaults to the RacerX index).
 
 > From-scratch WM needs **far more data/steps** than a finetune to reach the same
 > quality — warm-starting from `checkpoint-52000` is the sane single-GPU path.
@@ -300,7 +304,7 @@ ENTRY=scripts/train_codec.py RS_DINO_WEIGHTS_DIR=<dino> TRAIN=... TEST=... sbatc
 
 ### Validation is the upfront cost
 
-`smoke_test.bat` sets `validation.val_first=true` but does **not** cap
+`smoke_finetune.bat` sets `validation.val_first=true` but does **not** cap
 `validation.val_n_samples` (default **1024**) or `world_model_metrics.num_samples`
 (default **2048**, each a 20-frame autoregressive rollout). So it validates *before*
 step 1, which stalls for ~1–3 GPU-hours before any TensorBoard scalar appears — it is
@@ -309,7 +313,7 @@ step 1, which stalls for ~1–3 GPU-hours before any TensorBoard scalar appears 
 
 ## TensorBoard
 
-Logging is ON by default (`tensorboard.logdir=${run.output_dir}/tb`). `smoke_test.bat`
+Logging is ON by default (`tensorboard.logdir=${run.output_dir}/tb`). `smoke_finetune.bat`
 writes to `<mira>\train_world_model_logs\`; the racer-x smoke bats write under
 `<rec>\mira_wds\{codec_smoke,wm_smoke}\`.
 
