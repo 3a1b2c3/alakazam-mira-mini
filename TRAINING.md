@@ -187,9 +187,10 @@ cluster use (env-driven, no hardcoded paths, `pixi run --frozen` by default):
 
 | script | mirrors | required env |
 |---|---|---|
-| `train_codec.sh` | `train_mira_smoke.bat` (codec from scratch) | `DATA_INDEX`, `RS_DINO_WEIGHTS_DIR` |
-| `train.sh` | `train.bat`/`finetune.bat` (world model) | `DATA_INDEX`, `CODEC`; set `WM=` to warm-start |
-| `smoke_test_all.sh` | `smoke_test_all.bat` (full suite) | `DATA_INDEX`, `OUT` (+ `CODEC`/`WM`/`RS_DINO_WEIGHTS_DIR` per step) |
+| `train_codec.sh` (`<mira>`) | `train_mira_smoke.bat` (codec from scratch) | `DATA_INDEX`, `RS_DINO_WEIGHTS_DIR` |
+| `train.sh` (`<mira>`) | `train.bat`/`finetune.bat` (world model) | `DATA_INDEX`, `CODEC`; `TEST_INDEX`/`WM` optional |
+| `smoke_test_all.sh` (`<mira>`) | `smoke_test_all.bat` (full suite) | `DATA_INDEX`, `OUT` (+ `CODEC`/`WM`/`RS_DINO_WEIGHTS_DIR` per step) |
+| **`train_racerx.sh`** (`<mini>`) | RacerX Linux one-shot (wires train+test split → `train.sh`) | `RX_ROOT`, `CODEC`; `WM` optional |
 
 ```bash
 # codec from scratch
@@ -202,6 +203,50 @@ DATA_INDEX=<rec>/mira_wds/train/index.json CODEC=<snap>/codec/checkpoint-125000/
 
 Override the env prefix with `RUN=""` (torch on PATH) or `RUN="source .venv/bin/activate &&"`.
 Extra Hydra overrides pass straight through (`"$@"`).
+
+## Train RacerX on Linux (WSL / cluster)
+
+The data is built on Windows (`<rec>\mira_wds`), but real training runs best on Linux (proper
+NCCL/multi-GPU, faster dataloaders). `train_racerx.sh` (`<mini>`) is the one command: it points
+at the RacerX **train + held-out test** split, the frozen mira-mini codec, an optional warm-start,
+then calls `<mira>/train.sh`. Requires `<mini>` and `<mira>` cloned **side by side**.
+
+**1. Environment** (Linux/WSL box, once):
+```bash
+git clone <mira-repo-url> mira && cd mira
+export PATH="$HOME/.pixi/bin:$PATH"      # if pixi isn't on PATH
+pixi install --locked                     # solve + fetch the env (no network at run time)
+```
+(or a plain venv with `pip install -e ".[hf,hydra,viz]"` + CUDA torch, then `RUN="source .venv/bin/activate &&"`.)
+
+**2. Data** — the WebDataset is **portable** (shard paths in `index.json` are relative):
+- **WSL:** read it in place at `/mnt/c/recordings/mira_wds` (slow 9p FS — fine to start; **copy to the
+  Linux native FS for a real run**: `cp -r /mnt/c/recordings/mira_wds ~/mira_wds`).
+- **Remote cluster:** `rsync -a /mnt/c/recordings/mira_wds/ user@host:~/mira_wds/` (or scp).
+
+**3. Checkpoints** — get the mira-mini weights on the Linux box:
+```bash
+pixi run huggingface-cli download alakazamworld/mira-mini    # -> ~/.cache/huggingface/... 
+```
+Note the `<snap>` dir; `CODEC` = `<snap>/codec/checkpoint-125000/checkpoint.pth`,
+`WM` = `<snap>/checkpoint-52000/checkpoint.pth`. DINOv3-L/16 (`RS_DINO_WEIGHTS_DIR`) only for codec training.
+
+**4. Launch** (from `<mini>`):
+```bash
+# from scratch on RacerX (train + honest held-out eval):
+RX_ROOT=~/mira_wds CODEC=<snap>/codec/checkpoint-125000/checkpoint.pth \
+  ./train_racerx.sh run.steps=20000 run.batch_size=2 dataloader.num_workers=8
+
+# finetune from mira-mini instead: add WM=
+RX_ROOT=~/mira_wds CODEC=<snap>/codec/checkpoint-125000/checkpoint.pth \
+  WM=<snap>/checkpoint-52000/checkpoint.pth ./train_racerx.sh run.steps=10000
+```
+`train_racerx.sh` auto-uses `<RX_ROOT>/test/index.json` for eval when present (the holdout), so metrics
+are honest. Extra Hydra overrides pass straight through.
+
+**5. Multi-GPU** — `train_racerx.sh` is single-process; for multi-GPU/multi-node use `<mira>/train.sh`
+under `torchrun`, or the `<mira>/train.sbatch` SLURM launcher (next section) with
+`TRAIN=<rec>/mira_wds/train/index.json TEST=<rec>/mira_wds/test/index.json`.
 
 ## Run on SLURM
 

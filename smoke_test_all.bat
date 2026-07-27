@@ -46,7 +46,7 @@ call "%RX%\train_mira_smoke.bat" %STEPS%
 call :ckpt "%REC%\codec_smoke" R_CODEC
 
 echo ############### 3/5 world model FINETUNE (warm start) ###############
-call "%~dp0smoke_test.bat" run.steps=%STEPS% %CAPS% run.output_dir=%RECF%/wm_finetune_smoke
+call "%~dp0smoke_finetune.bat" run.steps=%STEPS% %CAPS% run.output_dir=%RECF%/wm_finetune_smoke
 call :ckpt "%REC%\wm_finetune_smoke" R_FT
 
 echo ############### 4/5 world model FROM SCRATCH ###############
