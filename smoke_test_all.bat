@@ -26,8 +26,8 @@ set "IDX=C:/recordings/mira_wds/train/index.json"
 
 set "STEPS=%~1"
 if "%STEPS%"=="" set "STEPS=20"
-REM tensorboard.logdir=null: smoke runs are throwaway -> don't write TB event files.
-set "CAPS=validation.val_n_samples=8 world_model_metrics.num_samples=16 tensorboard.logdir=null"
+REM ++tensorboard.logdir=null: smoke runs are throwaway -> don't write TB event files.
+set "CAPS=validation.val_n_samples=8 world_model_metrics.num_samples=16 ++tensorboard.logdir=null"
 
 REM clear stray torchrun env so the single-GPU path is taken (Windows has no NCCL)
 set "LOCAL_RANK=" & set "RANK=" & set "WORLD_SIZE=" & set "MASTER_ADDR=" & set "MASTER_PORT="

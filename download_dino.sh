@@ -28,6 +28,23 @@ get() {   # $1=signed url  $2=target filename  $3=label
 get "${DINOV3_VITL16_URL:-}" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth" "vitl16 (large, codec training)"
 get "${DINOV3_VITB16_URL:-}" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth" "vitb16 (base, eval_wm metrics)"
 
+# torch.hub loads the DINOv3 model DEFINITION (not the weights) from the facebookresearch/dinov3
+# GitHub repo at model-construction time. On a shared cluster (horde), many anonymous nodes exhaust
+# GitHub's API rate limit -> "HTTPError 403: rate limit exceeded" and training dies before step 0.
+# Pre-clone the repo into the torch hub cache so torch.hub.load finds it locally ("Using cache found
+# in ...") and never touches GitHub. Dir name MUST be <owner>_<repo>_<branch> = facebookresearch_dinov3_main.
+hubdir="${TORCH_HOME:-$HOME/.cache/torch}/hub"
+repodir="$hubdir/facebookresearch_dinov3_main"
+if [ -d "$repodir" ]; then
+    echo "  have dinov3 hub repo: $repodir"
+else
+    echo "  cloning facebookresearch/dinov3 -> $repodir (avoids torch.hub GitHub rate limit)"
+    mkdir -p "$hubdir"
+    git clone --depth 1 https://github.com/facebookresearch/dinov3 "$repodir" \
+        || echo "  ERROR: git clone dinov3 failed; torch.hub will fall back to GitHub (may 403 on a busy cluster)"
+fi
+
 echo
 echo "dino_weights now holds:"
 ls -1 "$DEST"/*.pth 2>/dev/null || true
+echo "torch hub repo: $repodir $([ -d "$repodir" ] && echo OK || echo MISSING)"

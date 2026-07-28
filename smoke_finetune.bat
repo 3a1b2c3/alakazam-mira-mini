@@ -36,7 +36,7 @@ echo === GPU free (need a few GB; ~0 MiB means something else is holding it) ===
 nvidia-smi --query-gpu=memory.free,memory.used --format=csv,noheader
 echo.
 
-call "%HERE%finetune.bat" run.steps=200 validation.val_first=true validation.val_n_samples=8 world_model_metrics.num_samples=16 tensorboard.logdir=null %RX_ARGS% %*
+call "%HERE%finetune.bat" run.steps=200 validation.val_first=true validation.val_n_samples=8 world_model_metrics.num_samples=16 ++tensorboard.logdir=null %RX_ARGS% %*
 
 echo.
 echo === smoke test done. Logs/checkpoints under: %MIRA%\train_world_model_logs ===

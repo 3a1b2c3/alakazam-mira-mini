@@ -34,7 +34,7 @@ nvidia-smi --query-gpu=memory.free,memory.used --format=csv,noheader
 echo.
 
 REM train.bat = from scratch (no run.finetune_from). Capped validation so val_first doesn't stall.
-call "%HERE%train.bat" run.steps=200 validation.val_first=true validation.val_n_samples=8 world_model_metrics.num_samples=16 tensorboard.logdir=null %RX_ARGS% %*
+call "%HERE%train.bat" run.steps=200 validation.val_first=true validation.val_n_samples=8 world_model_metrics.num_samples=16 ++tensorboard.logdir=null %RX_ARGS% %*
 
 echo.
 echo === from-scratch smoke done. Logs/checkpoints under: %MIRA%\train_world_model_logs ===

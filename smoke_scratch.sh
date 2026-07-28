@@ -32,7 +32,7 @@ nvidia-smi --query-gpu=memory.free,memory.used --format=csv,noheader || true
 echo
 
 # train.sh = from scratch (no run.finetune_from). Capped validation so val_first doesn't stall.
-"$here/train.sh" run.steps=200 validation.val_first=true validation.val_n_samples=8 world_model_metrics.num_samples=16 tensorboard.logdir=null "${RX_ARGS[@]}" "$@"
+"$here/train.sh" run.steps=200 validation.val_first=true validation.val_n_samples=8 world_model_metrics.num_samples=16 ++tensorboard.logdir=null "${RX_ARGS[@]}" "$@"
 
 echo
 echo "=== from-scratch smoke done. Logs/checkpoints under: $mira/train_world_model_logs ==="
