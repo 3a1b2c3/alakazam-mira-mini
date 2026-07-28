@@ -26,12 +26,17 @@ PORT="${2:-6006}"
 
 [ -d "$LOGDIR" ] || { echo "ERROR: logdir not found: $LOGDIR  (has training written any TB events yet?)"; exit 1; }
 
-cd "$mira"
-# tensorboard isn't in the mira pixi env by default -- auto-install it once if missing.
-if ! $RUN python -c "import tensorboard" >/dev/null 2>&1; then
-    echo "== tensorboard not in env -- installing (one-time) =="
-    $RUN python -m pip install tensorboard || $RUN pip install tensorboard || {
-        echo "ERROR: could not install tensorboard (try: cd $mira && pixi add tensorboard)"; exit 1; }
+# TensorBoard only READS event files -- it doesn't need the pixi training env (whose
+# python has no pip anyway). Use the system python3 + user site; auto-install if missing.
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v tensorboard >/dev/null 2>&1 && ! python3 -c "import tensorboard" >/dev/null 2>&1; then
+    echo "== installing tensorboard (system python3, --user, one-time) =="
+    python3 -m pip install --user tensorboard || pip install --user tensorboard || {
+        echo "ERROR: could not install tensorboard"; exit 1; }
 fi
 echo "Serving TensorBoard for \"$LOGDIR\" on http://localhost:$PORT  (Ctrl+C to stop)"
-exec $RUN tensorboard --logdir "$LOGDIR" --port "$PORT"
+if command -v tensorboard >/dev/null 2>&1; then
+    exec tensorboard --logdir "$LOGDIR" --port "$PORT"
+else
+    exec python3 -m tensorboard.main --logdir "$LOGDIR" --port "$PORT"
+fi
