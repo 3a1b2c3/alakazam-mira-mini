@@ -14,7 +14,14 @@ here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 RUN="${RUN:-pixi run --frozen}"
 
-LOGDIR="${1:-${REC:-/mnt/c/recordings/mira_wds}}"
+# default logdir: explicit arg > REC env > first existing home/Windows candidate
+LOGDIR="${1:-${REC:-}}"
+if [ -z "$LOGDIR" ]; then
+    for c in "$HOME/mira_wds/wm_racerx_ft" "$HOME/mira_wds" /mnt/c/recordings/mira_wds; do
+        [ -d "$c" ] && { LOGDIR="$c"; break; }
+    done
+    LOGDIR="${LOGDIR:-/mnt/c/recordings/mira_wds}"
+fi
 PORT="${2:-6006}"
 
 [ -d "$LOGDIR" ] || { echo "ERROR: logdir not found: $LOGDIR  (has training written any TB events yet?)"; exit 1; }
