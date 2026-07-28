@@ -30,6 +30,23 @@ SETUP_TASK="${SETUP_TASK:-setup}"
 echo "--- pixi run $SETUP_TASK (cu128 torch 2.8 + torchcodec + mira editable) ---"
 pixi run "$SETUP_TASK" || { echo "ERROR: 'pixi run $SETUP_TASK' failed"; exit 1; }
 
+# ---- tensorboard INTO the pixi env ------------------------------------------
+# tracker.py does an UNGUARDED `from torch.utils.tensorboard import SummaryWriter`
+# whenever tensorboard.logdir is set (which all training launchers now do by
+# default) -- without tensorboard in THIS env the run CRASHES at the first log
+# step, not just leaves an empty dir. Install it here (try uv pip -> pip -> pixi add).
+echo "--- ensure tensorboard in the env (TB scalar logging) ---"
+if pixi run --frozen python -c "import tensorboard" >/dev/null 2>&1; then
+    echo "  tensorboard already present"
+else
+    pixi run --frozen uv pip install tensorboard >/dev/null 2>&1 \
+     || pixi run --frozen python -m pip install tensorboard >/dev/null 2>&1 \
+     || pixi add tensorboard >/dev/null 2>&1 \
+     || echo "  WARN: could not install tensorboard into the env -- TB logging unavailable (wandb still works)"
+    pixi run --frozen python -c "import tensorboard; print('  tensorboard', tensorboard.__version__)" 2>/dev/null \
+     || echo "  tensorboard NOT importable in the env"
+fi
+
 # ---- DINOv3 hub repo (avoids the torch.hub GitHub 403 at train time) ---------
 # The codec builds its DINOv3 backbone via torch.hub.load("facebookresearch/dinov3", ...), which
 # pulls the repo's model DEFINITION from GitHub at model-construction time. On a shared cluster
