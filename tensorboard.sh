@@ -17,10 +17,10 @@ RUN="${RUN:-pixi run --frozen}"
 # default logdir: explicit arg > REC env > first existing home/Windows candidate
 LOGDIR="${1:-${REC:-}}"
 if [ -z "$LOGDIR" ]; then
-    for c in "$HOME/mira_wds/wm_racerx_ft" "$HOME/mira_wds" /mnt/c/recordings/mira_wds; do
+    for c in "$HOME/mira_wds/wm_racerx_ft/tb" "$HOME/mira_wds/wm_racerx_ft" "$HOME/mira_wds" /mnt/c/recordings/mira_wds; do
         [ -d "$c" ] && { LOGDIR="$c"; break; }
     done
-    LOGDIR="${LOGDIR:-/mnt/c/recordings/mira_wds}"
+    LOGDIR="${LOGDIR:-$HOME/mira_wds/wm_racerx_ft/tb}"
 fi
 PORT="${2:-6006}"
 
