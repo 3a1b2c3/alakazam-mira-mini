@@ -36,7 +36,13 @@ CODEC="${CODEC:-$SNAP/codec/checkpoint-125000/checkpoint.pth}"
 WM="${WM:-$SNAP/checkpoint-52000/checkpoint.pth}"
 [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint-52000 not found in $SNAP"; exit 1; }
 
-STEPS="${1:-10000}"; [ "$#" -gt 0 ] && shift || true
+# $1 is the step count ONLY if it's all digits; a key=value first arg is a Hydra
+# override (e.g. tensorboard.logdir=...), kept in "$@" instead of becoming run.steps.
+STEPS=10000
+case "${1:-}" in
+    ''|*[!0-9]*) : ;;            # empty / non-numeric -> keep default, don't consume
+    *) STEPS="$1"; shift ;;      # pure digits -> use as steps
+esac
 
 # AUTO-RESUME: if a checkpoint already exists in the output dir, CONTINUE from it
 # (restores optimizer + step counter -> picks up where a killed run left off); else
