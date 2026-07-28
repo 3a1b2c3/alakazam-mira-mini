@@ -46,5 +46,5 @@ echo.
 
 REM dataloader.num_workers=0 -> load in the main process: no Windows worker-spawn
 REM overhead, and one shard doesn't need parallel readers. Raise it for real runs.
-"%PY%" scripts/train_world_model.py model.architecture.config.codec_checkpoint="%CODEC_CKPT%" dataset.train_index="%TRAIN_INDEX%" dataset.test_index="%TEST_INDEX%" run.batch_size=1 run.compile=false wandb.mode=offline dataloader.num_workers=0 %*
+"%PY%" scripts/train_world_model.py model.architecture.config.codec_checkpoint="%CODEC_CKPT%" dataset.train_index="%TRAIN_INDEX%" dataset.test_index="%TEST_INDEX%" run.batch_size=1 run.compile=false wandb.mode=offline dataloader.num_workers=0 ++tensorboard.logdir=${run.output_dir}/tb %*
 endlocal

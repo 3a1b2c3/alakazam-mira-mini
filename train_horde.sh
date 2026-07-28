@@ -74,4 +74,5 @@ exec pixi run torchrun --nproc_per_node="$NPROC" scripts/train_world_model.py \
   dataset.train_index="$TRAIN" dataset.test_index="$TEST" \
   run.batch_size="$BATCH" run.steps="$STEPS" run.output_dir="$OUT" \
   dataloader.num_workers="$WORKERS" wandb.mode=offline \
+  ++tensorboard.logdir="$OUT/tb" \
   "${START[@]}" "$@"

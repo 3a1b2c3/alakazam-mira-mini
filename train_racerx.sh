@@ -33,4 +33,9 @@ fi
 # WM is optional; train.sh warm-starts if it's set.
 
 # dataloader.num_workers>0 is fine on Linux (unlike Windows); raise it for real runs via the args.
-exec "$mira/train.sh" "$@"
+# Same baseline defaults as finetune_racerx.sh (compile=30x faster, freq checkpoints, capped
+# val, TB events) -- passed through train.sh to the trainer; override any via extra args.
+exec "$mira/train.sh" \
+    run.compile=true run.checkpoint_every=250 optim.scheduler.warmup_steps=200 \
+    validation.val_n_samples=64 world_model_metrics.num_samples=128 \
+    '++tensorboard.logdir=${run.output_dir}/tb' "$@"
