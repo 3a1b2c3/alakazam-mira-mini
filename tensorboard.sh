@@ -27,5 +27,11 @@ PORT="${2:-6006}"
 [ -d "$LOGDIR" ] || { echo "ERROR: logdir not found: $LOGDIR  (has training written any TB events yet?)"; exit 1; }
 
 cd "$mira"
+# tensorboard isn't in the mira pixi env by default -- auto-install it once if missing.
+if ! $RUN python -c "import tensorboard" >/dev/null 2>&1; then
+    echo "== tensorboard not in env -- installing (one-time) =="
+    $RUN python -m pip install tensorboard || $RUN pip install tensorboard || {
+        echo "ERROR: could not install tensorboard (try: cd $mira && pixi add tensorboard)"; exit 1; }
+fi
 echo "Serving TensorBoard for \"$LOGDIR\" on http://localhost:$PORT  (Ctrl+C to stop)"
 exec $RUN tensorboard --logdir "$LOGDIR" --port "$PORT"
