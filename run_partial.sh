@@ -34,6 +34,8 @@ PY
     [ $? -eq 0 ] || exit 1
 done
 
+# export so finetune_racerx.sh uses the SAME data root (else it falls back to its default)
+export RX_ROOT="$REC"
 exec "$here/finetune_racerx.sh" "$STEPS" \
     dataset.train_index="$REC/train/index.partial.json" \
     dataset.test_index="$REC/test/index.partial.json" "$@"
