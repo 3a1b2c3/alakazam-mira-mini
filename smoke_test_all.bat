@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions enabledelayedexpansion
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM Smoke-test EVERY runnable MIRA training path on the RacerX data, each capped
 REM (few val samples, few steps) so it reaches real training steps + a checkpoint

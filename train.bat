@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM Train the MIRA latent world model on the FROZEN mira-mini codec (125k).
 REM Prereq: get_data.bat (writes data_paths.bat with TRAIN_INDEX/TEST_INDEX).

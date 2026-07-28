@@ -15,6 +15,7 @@
 #   RX_ROOT=/mnt/c/recordings/mira_wds CODEC=<codec.pth> ./train_racerx.sh run.steps=20000
 #   WM=<wm.pth> RX_ROOT=... CODEC=... ./train_racerx.sh run.steps=5000     # finetune
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 [ -x "$mira/train.sh" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }

@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions enabledelayedexpansion
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM Offline-evaluate a world-model checkpoint (metrics on a saved checkpoint,
 REM no training). Runs mira's scripts/eval_world_model_offline.py, which reads

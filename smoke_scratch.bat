@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM FROM-SCRATCH smoke: random-init the world model on the frozen mira-mini codec and run a tiny
 REM capped pass on the RacerX data to prove the from-scratch path runs end-to-end. Validation is

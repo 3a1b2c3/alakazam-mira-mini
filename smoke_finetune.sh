@@ -11,6 +11,7 @@
 #   ./smoke_finetune.sh                 200-step warm-start smoke
 #   ./smoke_finetune.sh run.steps=50    even shorter
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 

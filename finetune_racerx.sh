@@ -14,6 +14,7 @@
 #   ./finetune_racerx.sh 20000
 #   RX_ROOT=/data/mira_wds ./finetune_racerx.sh 10000 run.batch_size=2
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 [ -f "$mira/pixi.toml" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }

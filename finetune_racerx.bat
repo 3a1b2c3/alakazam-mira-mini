@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM FINETUNE the RacerX world model by warm-starting from the mira-mini 1B
 REM checkpoint (checkpoint-52000), on the frozen mira-mini codec, with honest

@@ -15,6 +15,7 @@
 #   NPROC=8 RX_ROOT=/data/mira_wds ./train_horde.sh run.steps=20000
 #   NPROC=8 RX_ROOT=... SCRATCH=1 STEPS=100000 ./train_horde.sh          # from scratch
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 [ -f "$mira/pixi.toml" ] || { echo "ERROR: mira trainer (with pixi.toml) not found at $mira -- clone it beside this repo"; exit 1; }

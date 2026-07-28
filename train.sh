@@ -15,6 +15,7 @@
 # For 4-player:    add   model=multi_wrapper_world_model dataset.n_players=4
 #   ./train.sh run.steps=200 run.batch_size=1
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 [ -f "$mira/pixi.toml" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }

@@ -14,6 +14,7 @@
 #   RUN                  env prefix (default "pixi run --frozen")
 # Usage:  ./smoke_test_all.sh [steps]          (default 20)
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 cd "$(dirname "$0")"
 
 STEPS="${1:-20}"

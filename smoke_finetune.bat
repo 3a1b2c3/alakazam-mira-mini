@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM FINETUNE smoke: warm-start from the mira-mini 1B checkpoint (checkpoint-52000) and run a tiny
 REM capped pass on the RacerX data to prove the pipeline runs end-to-end before a real run.

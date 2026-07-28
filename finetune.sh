@@ -7,6 +7,7 @@
 # Prereq: ./get_data.sh (or pass dataset.train_index=). Extra Hydra overrides pass
 # through, e.g.  ./finetune.sh run.steps=200
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 
 # Warm-start WM from the mira-mini HF snapshot (globbed -> no hardcoded hash).

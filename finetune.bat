@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM Finetune (warm-start) from the released 1B world-model checkpoint in the
 REM mira-mini bundle, instead of training from scratch -- the sane single-GPU

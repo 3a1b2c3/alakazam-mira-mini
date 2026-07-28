@@ -1,5 +1,6 @@
 @echo off
 setlocal enableextensions
+set "HYDRA_FULL_ERROR=1"
 REM ==========================================================================
 REM Train the RacerX world model FROM SCRATCH on the frozen mira-mini codec,
 REM with honest eval on the held-out test split. Nothing hardcoded: data root is

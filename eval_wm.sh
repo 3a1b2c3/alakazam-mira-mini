@@ -18,6 +18,7 @@
 #   ./eval_wm.sh <ckpt> --viz 4                                    (also render 4 rollouts)
 #   ./eval_wm.sh --viz 4                                           (default ckpt + extra args)
 set -uo pipefail
+export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 [ -f "$mira/pixi.toml" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }
