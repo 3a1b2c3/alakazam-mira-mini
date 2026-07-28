@@ -19,8 +19,16 @@ export PATH="$HOME/.pixi/bin:$PATH"
 
 # ---- locked linux-64 env (solve + download once; no network at run time) ----
 cd "$mira"
-echo "--- pixi install --locked (reproducing the locked linux-64 env) ---"
+echo "--- pixi install --locked (conda base: python, ffmpeg, cuda libs) ---"
 pixi install --locked || { echo "ERROR: pixi install failed"; exit 1; }
+
+# ---- torch + torchcodec + mira (editable) INTO the env -----------------------
+# pixi install only lays down the conda base; the Python ML deps (cu128 torch 2.8,
+# torchcodec, and the editable mira package) come from the pixi `setup` task.
+# Use `setup-cpu` on a machine with no NVIDIA GPU.
+SETUP_TASK="${SETUP_TASK:-setup}"
+echo "--- pixi run $SETUP_TASK (cu128 torch 2.8 + torchcodec + mira editable) ---"
+pixi run "$SETUP_TASK" || { echo "ERROR: 'pixi run $SETUP_TASK' failed"; exit 1; }
 
 # ---- verify -----------------------------------------------------------------
 echo
