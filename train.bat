@@ -33,6 +33,22 @@ set "WORLD_SIZE="
 set "MASTER_ADDR="
 set "MASTER_PORT="
 
+REM AUTO-RESUME: if a checkpoint already exists in the default output dir, CONTINUE from it
+REM (restores optimizer + step counter -> picks up where a killed run left off).
+set "CONTINUE_FROM="
+for /d %%D in ("train_world_model_logs*") do (
+    for /f "tokens=*" %%F in ('dir /b /o-n "%%D\checkpoints\checkpoint-*.pth" 2^>nul') do (
+        set "CONTINUE_FROM=%%D\checkpoints\%%F"
+    )
+)
+if defined CONTINUE_FROM (
+    set "CONTINUE_FROM=%CONTINUE_FROM:\=/%"
+    echo Auto-resuming from: %CONTINUE_FROM%
+    set "RESUME_ARG=run.continue_from=%CONTINUE_FROM%"
+) else (
+    set "RESUME_ARG="
+)
+
 REM The DINOv3 codec encoder is internally torch.compile'd (inductor needs Triton).
 REM triton-windows is installed, so compile runs. If it errors on a Triton/inductor
 REM version mismatch, fall back to eager with:  set "TORCHDYNAMO_DISABLE=1"
@@ -46,5 +62,5 @@ echo.
 
 REM dataloader.num_workers=0 -> load in the main process: no Windows worker-spawn
 REM overhead, and one shard doesn't need parallel readers. Raise it for real runs.
-"%PY%" scripts/train_world_model.py model.architecture.config.codec_checkpoint="%CODEC_CKPT%" dataset.train_index="%TRAIN_INDEX%" dataset.test_index="%TEST_INDEX%" run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers=0 run.log_every=50 ++tensorboard.logdir=${run.output_dir}/tb %*
+"%PY%" scripts/train_world_model.py model.architecture.config.codec_checkpoint="%CODEC_CKPT%" dataset.train_index="%TRAIN_INDEX%" dataset.test_index="%TEST_INDEX%" run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers=0 run.log_every=50 %RESUME_ARG% ++tensorboard.logdir=${run.output_dir}/tb %*
 endlocal

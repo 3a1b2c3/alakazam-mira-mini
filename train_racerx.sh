@@ -33,10 +33,37 @@ fi
 : "${CODEC:?set CODEC=/path/to/mira-mini/codec/checkpoint-125000/checkpoint.pth}"
 # WM is optional; train.sh warm-starts if it's set.
 
+# Auto-detect and resume from latest checkpoint if it exists
+output_dir=""
+for arg in "$@"; do
+    if [[ "$arg" == run.output_dir=* ]]; then
+        output_dir="${arg#run.output_dir=}"
+        break
+    fi
+done
+
+if [ -z "$output_dir" ]; then
+    output_dir=$(ls -dt train_world_model_logs* 2>/dev/null | head -1)
+fi
+
+continue_from=""
+if [ -n "$output_dir" ] && [ -d "$output_dir/checkpoints" ]; then
+    latest_ckpt=$(find "$output_dir/checkpoints" -name "checkpoint-*.pth" 2>/dev/null | \
+        sed 's/.*checkpoint-\([0-9]*\).*/\1/' | sort -n | tail -1)
+    if [ -n "$latest_ckpt" ]; then
+        ckpt_path="$output_dir/checkpoints/checkpoint-${latest_ckpt}.pth"
+        [ -f "$ckpt_path" ] && continue_from="run.continue_from=$ckpt_path"
+        if [ -n "$continue_from" ]; then
+            echo "Auto-resuming from: $ckpt_path (step $latest_ckpt)"
+        fi
+    fi
+fi
+
 # dataloader.num_workers>0 is fine on Linux (unlike Windows); raise it for real runs via the args.
 # Same baseline defaults as finetune_racerx.sh (compile=30x faster, freq checkpoints, capped
 # val, TB events) -- passed through train.sh to the trainer; override any via extra args.
 exec bash "$mira/train.sh" \
     run.compile=true run.checkpoint_every=250 run.log_every=50 optim.scheduler.warmup_steps=200 \
     validation.val_n_samples=64 world_model_metrics.num_samples=128 \
+    $continue_from \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"

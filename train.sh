@@ -54,6 +54,33 @@ fi
 
 cd "$mira"
 export WANDB_MODE=offline
+
+# Auto-detect and resume from latest checkpoint if it exists
+output_dir=""
+for arg in "$@"; do
+    if [[ "$arg" == run.output_dir=* ]]; then
+        output_dir="${arg#run.output_dir=}"
+        break
+    fi
+done
+
+if [ -z "$output_dir" ]; then
+    output_dir=$(ls -dt train_world_model_logs* 2>/dev/null | head -1)
+fi
+
+continue_from=""
+if [ -n "$output_dir" ] && [ -d "$output_dir/checkpoints" ]; then
+    latest_ckpt=$(find "$output_dir/checkpoints" -name "checkpoint-*.pth" 2>/dev/null | \
+        sed 's/.*checkpoint-\([0-9]*\).*/\1/' | sort -n | tail -1)
+    if [ -n "$latest_ckpt" ]; then
+        ckpt_path="$output_dir/checkpoints/checkpoint-${latest_ckpt}.pth"
+        [ -f "$ckpt_path" ] && continue_from="run.continue_from=$ckpt_path"
+        if [ -n "$continue_from" ]; then
+            echo "Auto-resuming from: $ckpt_path (step $latest_ckpt)"
+        fi
+    fi
+fi
+
 echo "GPU free:"
 nvidia-smi --query-gpu=memory.free --format=csv,noheader || true
 echo "codec = $CODEC"
@@ -64,4 +91,5 @@ exec $RUN python scripts/train_world_model.py \
     model.architecture.config.codec_checkpoint="$CODEC" \
     "${idx[@]}" \
     run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 \
+    $continue_from \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"
