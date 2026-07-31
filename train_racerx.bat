@@ -49,5 +49,5 @@ echo train  = %RECF%/train/index.json
 echo test   = %TESTIDX%
 echo output = %RECF%/wm_racerx  (%STEPS% steps)
 echo.
-"%MIRA%\.venv\Scripts\python.exe" scripts\train_world_model.py model.architecture.config.codec_checkpoint="%CODEC%" %STARTARG% dataset.train_index=%RECF%/train/index.json dataset.test_index=%TESTIDX% run.batch_size=1 run.compile=true wandb.mode=disabled dataloader.num_workers=0 run.steps=%STEPS% run.output_dir=%RECF%/wm_racerx run.checkpoint_every=250 optim.scheduler.warmup_steps=200 validation.val_n_samples=64 world_model_metrics.num_samples=128 ++tensorboard.logdir=%RECF%/wm_racerx/tb %2 %3 %4 %5 %6
+"%MIRA%\.venv\Scripts\python.exe" scripts\train_world_model.py model.architecture.config.codec_checkpoint="%CODEC%" %STARTARG% dataset.train_index=%RECF%/train/index.json dataset.test_index=%TESTIDX% run.batch_size=1 run.compile=true wandb.mode=disabled dataloader.num_workers=0 run.steps=%STEPS% run.output_dir=%RECF%/wm_racerx run.checkpoint_every=250 run.log_every=50 optim.scheduler.warmup_steps=200 validation.val_n_samples=64 world_model_metrics.num_samples=128 ++tensorboard.logdir=%RECF%/wm_racerx/tb %2 %3 %4 %5 %6
 endlocal

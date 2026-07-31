@@ -1,7 +1,7 @@
 @echo off
 setlocal enableextensions enabledelayedexpansion
 REM ==========================================================================
-REM Upload mira_wds\{train,test} to the specific Horde instance kschmid-jzs62v.
+REM Upload mira_wds\{train,test} to the specific Horde instance kschmid-moqtul.
 REM SKIP-EXISTING: uses `wsl rsync` -- shards already on the instance (matching
 REM size) are skipped, and a partially-sent .tar is RESUMED, not restarted.
 REM Falls back to scp -r (re-sends everything) if WSL can't reach the host.
@@ -12,7 +12,7 @@ REM ==========================================================================
 
 REM --- connection (EDIT to match Horde's SSH panel) -------------------------
 set "USER=horde"
-set "HOST=10.57.233.223"
+set "HOST=10.57.233.24"
 set "PORT=22"
 REM --------------------------------------------------------------------------
 
@@ -43,6 +43,8 @@ if defined WSLSRC (
     REM mtime+size check would re-send them); --partial resumes an interrupted .tar.
     REM sync ONLY train/ + test/ (no trailing slash -> land as DEST/train, DEST/test);
     REM never the wm_* output dirs / checkpoints / wandb that also live under mira_wds.
+    REM !RSRC! (delayed) -- RSRC is set INSIDE this block, so %RSRC% would expand
+    REM empty at parse time and rsync would get no source (just lists the remote).
     set "RSRC=!WSLSRC!/train"
     if exist "%RX_ROOT%\test" set "RSRC=!WSLSRC!/train !WSLSRC!/test"
     wsl rsync -avz --partial --size-only --progress --exclude "wm_*" --exclude "wandb" -e "ssh -p %PORT%" !RSRC! "%USER%@%HOST%:%DEST%/"

@@ -411,5 +411,18 @@ RacerX playtest → mira WebDataset. Current state:
 - Build/refresh + validate the WebDataset: `<rx>\scripts\rebuild_dataset.bat`
 - Index consumed by the trainer: `<rec>\mira_wds\train\index.json`
 
+**Linux/Horde data default:** `train.sh`/`finetune.sh` now fall back to
+`$MIRA_WDS/{train,test}/index.json` (default `MIRA_WDS=/home/horde/mira_wds`, also
+accepts a flat `index.json`) when there's no `data_paths.sh` and no explicit
+`TRAIN_INDEX`/`dataset.train_index=`. So on the Horde box `./finetune.sh` alone
+picks up `/home/horde/mira_wds` — no `get_data.sh` needed. Precedence:
+`dataset.train_index=` (CLI) > `TRAIN_INDEX` env > `data_paths.sh` > `$MIRA_WDS`.
+
+**Xet download fix:** on the Horde box the HF **Xet** backend dies with
+`RuntimeError: Unable to parse string as hex hash value` mid-shard. `download_models.sh`
+and `download_weights.sh` now `export HF_HUB_DISABLE_XET=1` (forces plain HTTP);
+set `HF_HUB_DISABLE_XET=1` yourself before any manual `hf download` / `huggingface-cli
+download` / `pixi run ... download` on that box.
+
 > Finetuning on a *few* clips overfits fast — wait for more of the pending mp4
 > encodes before a real (non-smoke) run.

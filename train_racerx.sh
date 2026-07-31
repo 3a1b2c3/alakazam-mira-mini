@@ -37,6 +37,6 @@ fi
 # Same baseline defaults as finetune_racerx.sh (compile=30x faster, freq checkpoints, capped
 # val, TB events) -- passed through train.sh to the trainer; override any via extra args.
 exec bash "$mira/train.sh" \
-    run.compile=true run.checkpoint_every=250 optim.scheduler.warmup_steps=200 \
+    run.compile=true run.checkpoint_every=250 run.log_every=50 optim.scheduler.warmup_steps=200 \
     validation.val_n_samples=64 world_model_metrics.num_samples=128 \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"

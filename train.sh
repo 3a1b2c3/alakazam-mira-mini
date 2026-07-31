@@ -63,5 +63,5 @@ echo
 exec $RUN python scripts/train_world_model.py \
     model.architecture.config.codec_checkpoint="$CODEC" \
     "${idx[@]}" \
-    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" \
+    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"
