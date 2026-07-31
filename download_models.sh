@@ -15,7 +15,10 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run --frozen}"
 SPLIT="${SPLIT:-test}"
 SHARDS="${SHARDS:-1}"
-# Linux xet is fine, but keep it available as an escape hatch if a transfer stalls.
+# Disable the Xet backend: on this Horde box xet_get() dies with
+# "Unable to parse string as hex hash value" mid-shard. Force plain HTTP.
+# Override with HF_HUB_DISABLE_XET=0 to re-enable if xet ever gets fixed.
+export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
 export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-0}"
 
 echo "--- downloading rocket-science: split=$SPLIT shards=$SHARDS (0=full) ---"

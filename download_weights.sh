@@ -11,6 +11,11 @@ RUN="${RUN:-pixi run --frozen}"
 
 WHICH="${1:-1b}"
 
+# Disable Xet: on this Horde box xet_get() dies with "Unable to parse string as
+# hex hash value" mid-download. Force plain HTTP (override with =0 to re-enable).
+export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
+export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-0}"
+
 echo "GPU (weights are large; make sure the disk has room):"
 nvidia-smi --query-gpu=memory.free --format=csv,noheader || true
 echo

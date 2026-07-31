@@ -7,8 +7,11 @@
 #   RUN     env prefix (default "pixi run --frozen"; "" if torch on PATH / venv active)
 #   CODEC   frozen codec .pth  (default: globbed from the mira-mini HF snapshot)
 #   TRAIN_INDEX / TEST_INDEX   data indices (default: sourced from mira/data_paths.sh
-#                              written by get_data.sh; a dataset.train_index= override
-#                              in "$@" wins regardless)
+#                              written by get_data.sh; else fall back to
+#                              $MIRA_WDS/{train,test}/index.json. A dataset.train_index=
+#                              override in "$@" wins regardless)
+#   MIRA_WDS  local WebDataset root (default /home/horde/mira_wds) used when there is
+#                              no data_paths.sh and no explicit TRAIN_INDEX
 #   WORKERS dataloader workers (default 4 -- Linux has no Windows worker-spawn cost)
 #
 # For the full 1B: add   model/latent_world_model=1b
@@ -32,6 +35,17 @@ fi
 
 # Default data indices: sourced from data_paths.sh (get_data.sh) unless already set.
 [ -z "${TRAIN_INDEX:-}" ] && [ -f "$mira/data_paths.sh" ] && . "$mira/data_paths.sh"
+# Fallback: the local WebDataset at $MIRA_WDS (default /home/horde/mira_wds).
+# Standard layout is {split}/index.json; also accept a flat index.json.
+MIRA_WDS="${MIRA_WDS:-/home/horde/mira_wds}"
+if [ -z "${TRAIN_INDEX:-}" ]; then
+    if [ -f "$MIRA_WDS/train/index.json" ]; then
+        TRAIN_INDEX="$MIRA_WDS/train/index.json"
+        [ -f "$MIRA_WDS/test/index.json" ] && TEST_INDEX="$MIRA_WDS/test/index.json"
+    elif [ -f "$MIRA_WDS/index.json" ]; then
+        TRAIN_INDEX="$MIRA_WDS/index.json"
+    fi
+fi
 idx=()
 if [ -n "${TRAIN_INDEX:-}" ]; then
     idx=(dataset.train_index="$TRAIN_INDEX" dataset.test_index="${TEST_INDEX:-$TRAIN_INDEX}")

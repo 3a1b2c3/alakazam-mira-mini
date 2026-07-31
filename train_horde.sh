@@ -73,6 +73,8 @@ exec pixi run torchrun --nproc_per_node="$NPROC" scripts/train_world_model.py \
   model.architecture.config.codec_checkpoint="$CODEC" \
   dataset.train_index="$TRAIN" dataset.test_index="$TEST" \
   run.batch_size="$BATCH" run.steps="$STEPS" run.output_dir="$OUT" \
+  run.compile=true run.checkpoint_every=250 optim.scheduler.warmup_steps=200 \
+  validation.val_n_samples=64 world_model_metrics.num_samples=128 \
   dataloader.num_workers="$WORKERS" wandb.mode=disabled \
   ++tensorboard.logdir="$OUT/tb" \
   "${START[@]}" "$@"

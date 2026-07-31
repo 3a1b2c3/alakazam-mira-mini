@@ -3,9 +3,12 @@
 # world-model checkpoint (checkpoint-52000) in the mira-mini bundle instead of
 # training from scratch -- the sane single-GPU path. run.finetune_from loads the
 # WEIGHTS only (fresh optimizer/step); the default model config is already 1b.
-# Delegates to train.sh (which supplies the frozen codec + data + env).
-# Prereq: ./get_data.sh (or pass dataset.train_index=). Extra Hydra overrides pass
-# through, e.g.  ./finetune.sh run.steps=200
+# Delegates to train.sh (which supplies the frozen codec + data + env), so it
+# inherits train.sh's data default: $MIRA_WDS/{train,test}/index.json
+# (MIRA_WDS=/home/horde/mira_wds) when there's no data_paths.sh / TRAIN_INDEX.
+# So ./finetune.sh alone works once mira_wds is populated; override with
+# ./get_data.sh, TRAIN_INDEX=, or dataset.train_index=. Extra Hydra overrides
+# pass through, e.g.  ./finetune.sh run.steps=200
 set -uo pipefail
 export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"

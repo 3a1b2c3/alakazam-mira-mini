@@ -18,7 +18,8 @@ set -uo pipefail
 export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
-[ -x "$mira/train.sh" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }
+# -f not -x: git clones of the mira repo often drop the exec bit; we invoke it via `bash` below.
+[ -f "$mira/train.sh" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }
 
 : "${RX_ROOT:?set RX_ROOT=/path/to/mira_wds (holds train/ and test/)}"
 export DATA_INDEX="$RX_ROOT/train/index.json"
@@ -35,7 +36,7 @@ fi
 # dataloader.num_workers>0 is fine on Linux (unlike Windows); raise it for real runs via the args.
 # Same baseline defaults as finetune_racerx.sh (compile=30x faster, freq checkpoints, capped
 # val, TB events) -- passed through train.sh to the trainer; override any via extra args.
-exec "$mira/train.sh" \
+exec bash "$mira/train.sh" \
     run.compile=true run.checkpoint_every=250 optim.scheduler.warmup_steps=200 \
     validation.val_n_samples=64 world_model_metrics.num_samples=128 \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"
