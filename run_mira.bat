@@ -1,13 +1,14 @@
 @echo off
 setlocal enableextensions
 REM ==========================================================================
-REM Launch MIRA Mini locally in the browser. Uses the WorldCanvas .venv where
-REM alakazam-mira-mini is installed. First run downloads the weights on demand
+REM Launch MIRA Mini locally in the browser. Uses this repo's own .venv where
+REM alakazam-mira-mini is installed (run setup_play.bat first). First run
+REM downloads the weights on demand
 REM (or run download_weights.bat first). --model auto picks the 1b on CUDA.
 REM Usage:  run_mira.bat [extra args]   e.g.  run_mira.bat --model 364m --steps 8
 REM ==========================================================================
-set "MIRA=C:\workspace\world\WorldCanvas\.venv\Scripts\mira-mini.exe"
-if not exist "%MIRA%" ( echo ERROR: mira-mini not found at %MIRA% - install alakazam-mira-mini into that venv first & exit /b 1 )
+set "MIRA=%~dp0.venv\Scripts\mira-mini.exe"
+if not exist "%MIRA%" ( echo ERROR: mira-mini not found at %MIRA% - run setup_play.bat first & exit /b 1 )
 
 echo GPU before launch:
 nvidia-smi --query-gpu=memory.total,memory.used,memory.free --format=csv,noheader
