@@ -4,3 +4,8 @@ __pycache__/
 *.whl
 .venv/
 alakazam_mira/ui
+
+# host-specific upload scripts (kept local, not shared)
+upload_to_jzs62v.bat
+upload_to_moqtul.bat
+upload_dino_to_moqtul.bat

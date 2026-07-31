@@ -66,10 +66,12 @@ echo "test       = $TESTIDX"
 echo "output     = $OUTDIR  ($STEPS steps)"
 echo
 
-exec $RUN python scripts/train_world_model.py \
+# Uses the FINETUNE config (finetune_world_model.yaml): lr 5e-5, log_every 50, val_every 3000,
+# shuffle 1000, checkpoint retention. Only launcher-specific overrides remain below.
+exec $RUN python scripts/train_world_model.py --config-name finetune_world_model \
     model.architecture.config.codec_checkpoint="$CODEC" "$STARTARG" \
     dataset.train_index="$REC/train/index.json" dataset.test_index="$TESTIDX" \
     run.batch_size=1 run.compile=true wandb.mode=disabled dataloader.num_workers="$WORKERS" \
-    run.steps="$STEPS" run.output_dir="$OUTDIR" run.checkpoint_every=250 run.log_every=50 optim.scheduler.warmup_steps=200 \
+    run.steps="$STEPS" run.output_dir="$OUTDIR" run.checkpoint_every=250 optim.scheduler.warmup_steps=200 \
     validation.val_n_samples=64 world_model_metrics.num_samples=128 \
     ++tensorboard.logdir="$OUTDIR/tb" "$@"

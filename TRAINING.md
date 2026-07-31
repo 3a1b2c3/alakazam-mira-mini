@@ -324,6 +324,36 @@ tensorboard.bat <mira>\train_world_model_logs      the smoke_test run
 
 Uses mira's `.venv\Scripts\tensorboard.exe` (`python -m tensorboard` has no `__main__`).
 
+## Checkpoints (retention + comparing runs)
+
+Checkpoints are written every `run.checkpoint_every` (`10%` default; the racer-x launchers
+override to **250 steps**). Retention is two knobs:
+
+- `run.checkpoint_keep_recent` (now **3**) — keep the last N checkpoints.
+- `run.checkpoint_keep_permanent_every` (now **5000**) — ALSO keep one **forever** every N
+  steps, so you can compare checkpoints across the run. `-1` disables permanents.
+
+> The stock default was `keep_recent: 1` + no permanents → **only the latest checkpoint
+> survived**, so there was nothing to compare across training. Don't set it back to 1 unless
+> you truly only want the newest — you lose every earlier checkpoint.
+
+**Compare checkpoints** with the offline eval (metrics only, no training):
+
+```
+./eval_wm.sh /path/to/checkpoint-<N>/checkpoint.pth      # a specific checkpoint
+./eval_wm.sh                                             # newest local RacerX checkpoint
+```
+
+It reports **validation loss + world-model metrics** (DINO/latent drift, Fréchet DINO/Inception).
+Lower drift + FDD + val loss = better; run it on each permanent checkpoint and pick the best.
+
+- Caveat: the released base **`checkpoint-52000` can NOT be evaluated on RacerX data** (different
+  80-frame chunk format) — only RacerX-finetuned checkpoints eval on this data. Compare finetune
+  checkpoints against each other, not against the base.
+- Disk: each WM checkpoint is large (~1.2 B params + optimizer + EMA). `keep_permanent_every=5000`
+  over a full 250k run ≈ 50 checkpoints — fine for a finetune that stops early; raise the interval
+  (or prune) for long runs.
+
 ## Training details (what actually trains)
 
 Two-part latent world model:
