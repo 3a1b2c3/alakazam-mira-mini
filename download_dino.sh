@@ -17,21 +17,49 @@ mira="$here/../mira"
 DEST="${DINO_DEST:-$mira/dino_weights}"
 mkdir -p "$DEST"
 
-get() {   # $1=env var name  $2=default URL  $3=target filename  $4=label
-    local env_name="$1" default_url="$2" fn="$3" label="$4"
+get() {   # $1=env var name  $2=default URL  $3=target filename  $4=label  $5=hf_repo_id  $6=hf_filename
+    local env_name="$1" default_url="$2" fn="$3" label="$4" hf_repo="$5" hf_fn="$6"
     if [ -f "$DEST/$fn" ]; then echo "  have $label: $fn"; return; fi
     local url="${!env_name:-$default_url}"
     if [ -z "$url" ]; then echo "  SKIP $label: set $env_name to download $fn"; return; fi
+
     echo "  downloading $label -> $fn"
-    curl -L --fail -o "$DEST/$fn" "$url" || echo "  ERROR: download failed for $fn (check the URL/expiry)"
+    # Try curl first
+    if curl -L --fail -o "$DEST/$fn" "$url" 2>/dev/null; then
+        echo "    ✓ downloaded via curl"
+        return
+    fi
+
+    # Fallback: use huggingface_hub Python library (handles auth automatically)
+    echo "    curl failed, trying huggingface_hub..."
+    if command -v python &>/dev/null || command -v python3 &>/dev/null; then
+        python3 << PYTHON_EOF 2>/dev/null
+import os
+from huggingface_hub import hf_hub_download
+try:
+    token = os.environ.get("HF_TOKEN")
+    path = hf_hub_download(
+        repo_id="$hf_repo",
+        filename="$hf_fn",
+        cache_dir="$DEST",
+        token=token,
+    )
+    print(f"    ✓ downloaded via huggingface_hub")
+except Exception as e:
+    print(f"    ✗ ERROR: {e}")
+    exit(1)
+PYTHON_EOF
+    else
+        echo "  ✗ ERROR: download failed for $fn (curl and python unavailable)"
+    fi
 }
 
-# Default URLs from HuggingFace (no signed URL needed)
+# Default URLs from HuggingFace
 DINOV3_VITL16_DEFAULT="https://huggingface.co/facebookresearch/dinov3/resolve/main/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
 DINOV3_VITB16_DEFAULT="https://huggingface.co/facebookresearch/dinov3/resolve/main/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
 
-get "DINOV3_VITL16_URL" "$DINOV3_VITL16_DEFAULT" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth" "vitl16 (large, codec training)"
-get "DINOV3_VITB16_URL" "$DINOV3_VITB16_DEFAULT" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth" "vitb16 (base, eval_wm metrics)"
+get "DINOV3_VITL16_URL" "$DINOV3_VITL16_DEFAULT" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth" "vitl16 (large, codec training)" "facebookresearch/dinov3" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
+get "DINOV3_VITB16_URL" "$DINOV3_VITB16_DEFAULT" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth" "vitb16 (base, eval_wm metrics)" "facebookresearch/dinov3" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
 
 # torch.hub loads the DINOv3 model DEFINITION (not the weights) from the facebookresearch/dinov3
 # GitHub repo at model-construction time. On a shared cluster (horde), many anonymous nodes exhaust
