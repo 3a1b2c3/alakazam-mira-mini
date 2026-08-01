@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# Linux mirror of download_dino.bat. Download the (Meta-gated) DINOv3 backbone
-# weights into the sibling mira repo's dino_weights/, used by codec TRAINING
-# (vitl16, large) and the world-model FDD METRIC eval_wm.sh runs (vitb16, base).
-# The weights are gated, so supply your own time-limited SIGNED download URLs via
-# env vars (get them from
-#   https://ai.meta.com/resources/models-and-libraries/dinov3-downloads/):
+# Linux mirror of download_dino.bat. Download DINOv3 backbone weights from HuggingFace
+# into the sibling mira repo's dino_weights/, used by codec TRAINING (vitl16, large) and
+# the world-model FDD METRIC eval_wm.sh runs (vitb16, base).
 #
-#   export DINOV3_VITL16_URL=<signed url for the large weights>
-#   export DINOV3_VITB16_URL=<signed url for the base  weights>
+# Default: downloads from HuggingFace (facebookresearch/dinov3).
+# Override with env vars if needed:
+#   export DINOV3_VITL16_URL=<custom url for the large weights>
+#   export DINOV3_VITB16_URL=<custom url for the base  weights>
 #   ./download_dino.sh
 #
-# Skips any file already present, so re-run after adding a URL.
+# Skips any file already present, so re-run to retry failed downloads.
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
@@ -21,7 +20,7 @@ get() {   # $1=env var name  $2=default URL  $3=target filename  $4=label  $5=hf
     local env_name="$1" default_url="$2" fn="$3" label="$4" hf_repo="$5" hf_fn="$6"
     if [ -f "$DEST/$fn" ]; then echo "  have $label: $fn"; return; fi
     local url="${!env_name:-$default_url}"
-    if [ -z "$url" ]; then echo "  SKIP $label: set $env_name to download $fn"; return; fi
+    if [ -z "$url" ]; then echo "  SKIP $label: no URL set"; return; fi
 
     echo "  downloading $label -> $fn"
     # Try curl first
@@ -33,22 +32,12 @@ get() {   # $1=env var name  $2=default URL  $3=target filename  $4=label  $5=hf
     # Fallback: use huggingface_hub Python library (handles auth automatically)
     echo "    curl failed, trying huggingface_hub..."
 
-    # Check if HF_TOKEN is set
-    if [ -z "${HF_TOKEN:-}" ]; then
-        echo "  ✗ ERROR: HF_TOKEN not set. Set with:"
-        echo "      export HF_TOKEN='hf_your_token_here'"
-        return 1
-    fi
-
     # Try Python fallback
     if command -v python3 &>/dev/null; then
         python3 << PYTHON_EOF
 import os
 from huggingface_hub import hf_hub_download
 token = os.environ.get("HF_TOKEN")
-if not token:
-    print("  ✗ ERROR: HF_TOKEN not set")
-    exit(1)
 try:
     path = hf_hub_download(
         repo_id="$hf_repo",
@@ -56,9 +45,9 @@ try:
         cache_dir="$DEST",
         token=token,
     )
-    print(f"    ✓ downloaded via huggingface_hub to {path}")
+    print(f"    ✓ downloaded via huggingface_hub")
 except Exception as e:
-    print(f"  ✗ ERROR: huggingface_hub failed: {e}")
+    print(f"  ✗ ERROR: download failed: {e}")
     exit(1)
 PYTHON_EOF
         return $?
@@ -68,9 +57,9 @@ PYTHON_EOF
     fi
 }
 
-# Default URLs from HuggingFace
-DINOV3_VITL16_DEFAULT="https://huggingface.co/facebookresearch/dinov3/resolve/main/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
-DINOV3_VITB16_DEFAULT="https://huggingface.co/facebookresearch/dinov3/resolve/main/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+# Meta's CDN signed URLs (time-limited, from https://ai.meta.com/resources/models-and-libraries/dinov3-downloads/)
+DINOV3_VITL16_DEFAULT="https://dinov3.llamameta.net/dinov3_vitl16/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth?Policy=eyJTdGF0ZW1lbnQiOlt7InVuaXF1ZV9oYXNoIjoibHE1Mm8za3MxcmhyYnhtYzlyNG1qM2RxIiwiUmVzb3VyY2UiOiJodHRwczpcL1wvZGlub3YzLmxsYW1hbWV0YS5uZXRcLyoiLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE3ODU3NTYwNzl9fX1dfQ__&Signature=qEQg0t3HUKGSg5B5%7EnRVsOgSmrDjzWZNK2ERy10NInTlUktcJFnoarBmPINuZzoYJvaptmhnkndOB9RaeNh%7EXHnkxNRpL5t17KQkhvGjoJNS6WcmJUB4AZKuvxFWQxY25vYwRBfaMRumu-VYLDGbMpMHoWB0twn9TsNl4k7oLjWyVqbqyhZAgE5JGULBj5O2USHmfqCX38RRvEJQjXXX%7EfsH0oMxt8VlQw5qWMEUdBSchTYATnr7XlNnlozchrZ2tM7Z8ruGiAg5p4ZixIhK9IAnoB3YCUEM%7EgImpXIsPrQBom8ylyU5k3BMBnKSf-f5465YVpWloZgt3J1tihnuYQ__&Key-Pair-Id=K15QRJLYKIFSLZ&Download-Request-ID=1712895043303984"
+DINOV3_VITB16_DEFAULT="https://dinov3.llamameta.net/dinov3_vitb16/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth?Policy=eyJTdGF0ZW1lbnQiOlt7InVuaXF1ZV9oYXNoIjoibHE1Mm8za3MxcmhyYnhtYzlyNG1qM2RxIiwiUmVzb3VyY2UiOiJodHRwczpcL1wvZGlub3YzLmxsYW1hbWV0YS5uZXRcLyoiLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE3ODU3NTYwNzl9fX1dfQ__&Signature=qEQg0t3HUKGSg5B5%7EnRVsOgSmrDjzWZNK2ERy10NInTlUktcJFnoarBmPINuZzoYJvaptmhnkndOB9RaeNh%7EXHnkxNRpL5t17KQkhvGjoJNS6WcmJUB4AZKuvxFWQxY25vYwRBfaMRumu-VYLDGbMpMHoWB0twn9TsNl4k7oLjWyVqbqyhZAgE5JGULBj5O2USHmfqCX38RRvEJQjXXX%7EfsH0oMxt8VlQw5qWMEUdBSchTYATnr7XlNnlozchrZ2tM7Z8ruGiAg5p4ZixIhK9IAnoB3YCUEM%7EgImpXIsPrQBom8ylyU5k3BMBnKSf-f5465YVpWloZgt3J1tihnuYQ__&Key-Pair-Id=K15QRJLYKIFSLZ&Download-Request-ID=1712895043303984"
 
 get "DINOV3_VITL16_URL" "$DINOV3_VITL16_DEFAULT" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth" "vitl16 (large, codec training)" "facebookresearch/dinov3" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
 get "DINOV3_VITB16_URL" "$DINOV3_VITB16_DEFAULT" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth" "vitb16 (base, eval_wm metrics)" "facebookresearch/dinov3" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
