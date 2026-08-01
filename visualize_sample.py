@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """3D visualization of MIRA WebDataset samples.
 Shows video frames + actions in interactive 3D space.
-Usage: python visualize_sample.py --data <index.json> [--sample 0] [--port 8080]
+Usage: python visualize_sample.py --data <dataset-dir>/index.json [--sample 0] [--output out.png]
+Example: python visualize_sample.py --data C:\recordings\mira_wds\train\index.json --sample 0 --output sample0.png
 """
 import json
 import argparse
@@ -15,7 +16,13 @@ from torchcodec.decoders import VideoDecoder
 
 def load_sample(index_path, sample_idx=0):
     """Load a single sample from WebDataset index."""
-    with open(index_path) as f:
+    index_path = Path(index_path)
+    if not index_path.exists():
+        raise FileNotFoundError(f"Index not found: {index_path}\nExpect: <dataset>/index.json")
+    if index_path.name != "index.json":
+        raise ValueError(f"Expected index.json, got {index_path.name}\nUsage: --data <dataset-dir>/index.json")
+
+    with open(index_path, encoding="utf-8") as f:
         index = json.load(f)
 
     if sample_idx >= len(index["entries"]):

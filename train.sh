@@ -54,6 +54,8 @@ fi
 
 cd "$mira"
 export WANDB_MODE=offline
+# Point DINO loader to local weights
+export DINO_WEIGHTS_HOME="/home/horde/mira/dino_weights"
 
 # Auto-detect and resume from latest checkpoint if it exists
 output_dir=""
