@@ -32,25 +32,39 @@ get() {   # $1=env var name  $2=default URL  $3=target filename  $4=label  $5=hf
 
     # Fallback: use huggingface_hub Python library (handles auth automatically)
     echo "    curl failed, trying huggingface_hub..."
-    if command -v python &>/dev/null || command -v python3 &>/dev/null; then
-        python3 << PYTHON_EOF 2>/dev/null
+
+    # Check if HF_TOKEN is set
+    if [ -z "${HF_TOKEN:-}" ]; then
+        echo "  ✗ ERROR: HF_TOKEN not set. Set with:"
+        echo "      export HF_TOKEN='hf_your_token_here'"
+        return 1
+    fi
+
+    # Try Python fallback
+    if command -v python3 &>/dev/null; then
+        python3 << PYTHON_EOF
 import os
 from huggingface_hub import hf_hub_download
+token = os.environ.get("HF_TOKEN")
+if not token:
+    print("  ✗ ERROR: HF_TOKEN not set")
+    exit(1)
 try:
-    token = os.environ.get("HF_TOKEN")
     path = hf_hub_download(
         repo_id="$hf_repo",
         filename="$hf_fn",
         cache_dir="$DEST",
         token=token,
     )
-    print(f"    ✓ downloaded via huggingface_hub")
+    print(f"    ✓ downloaded via huggingface_hub to {path}")
 except Exception as e:
-    print(f"    ✗ ERROR: {e}")
+    print(f"  ✗ ERROR: huggingface_hub failed: {e}")
     exit(1)
 PYTHON_EOF
+        return $?
     else
-        echo "  ✗ ERROR: download failed for $fn (curl and python unavailable)"
+        echo "  ✗ ERROR: python3 not available (need curl OR python3)"
+        return 1
     fi
 }
 
