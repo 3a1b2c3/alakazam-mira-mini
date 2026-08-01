@@ -17,16 +17,21 @@ mira="$here/../mira"
 DEST="${DINO_DEST:-$mira/dino_weights}"
 mkdir -p "$DEST"
 
-get() {   # $1=signed url  $2=target filename  $3=label
-    local url="$1" fn="$2" label="$3"
+get() {   # $1=env var name  $2=default URL  $3=target filename  $4=label
+    local env_name="$1" default_url="$2" fn="$3" label="$4"
     if [ -f "$DEST/$fn" ]; then echo "  have $label: $fn"; return; fi
-    if [ -z "$url" ]; then echo "  SKIP $label: set its URL env var to download $fn"; return; fi
+    local url="${!env_name:-$default_url}"
+    if [ -z "$url" ]; then echo "  SKIP $label: set $env_name to download $fn"; return; fi
     echo "  downloading $label -> $fn"
-    curl -L --fail -o "$DEST/$fn" "$url" || echo "  ERROR: download failed for $fn (check the signed URL/expiry)"
+    curl -L --fail -o "$DEST/$fn" "$url" || echo "  ERROR: download failed for $fn (check the URL/expiry)"
 }
 
-get "${DINOV3_VITL16_URL:-}" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth" "vitl16 (large, codec training)"
-get "${DINOV3_VITB16_URL:-}" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth" "vitb16 (base, eval_wm metrics)"
+# Default URLs from HuggingFace (no signed URL needed)
+DINOV3_VITL16_DEFAULT="https://huggingface.co/facebookresearch/dinov3/resolve/main/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
+DINOV3_VITB16_DEFAULT="https://huggingface.co/facebookresearch/dinov3/resolve/main/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+
+get "DINOV3_VITL16_URL" "$DINOV3_VITL16_DEFAULT" "dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth" "vitl16 (large, codec training)"
+get "DINOV3_VITB16_URL" "$DINOV3_VITB16_DEFAULT" "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth" "vitb16 (base, eval_wm metrics)"
 
 # torch.hub loads the DINOv3 model DEFINITION (not the weights) from the facebookresearch/dinov3
 # GitHub repo at model-construction time. On a shared cluster (horde), many anonymous nodes exhaust
