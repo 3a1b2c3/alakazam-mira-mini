@@ -33,7 +33,7 @@ set "CODEC=%CODEC:\=/%"
 set "WM=%WM:\=/%"
 
 set "STEPS=%~1"
-if "%STEPS%"=="" set "STEPS=10000"
+if "%STEPS%"=="" set "STEPS=50000"
 
 REM AUTO-RESUME: if a checkpoint already exists in the output dir, CONTINUE from it (restores
 REM optimizer + step counter -> picks up where a killed run left off); else warm-start from the

@@ -38,7 +38,7 @@ WM="${WM:-$SNAP/checkpoint-52000/checkpoint.pth}"
 
 # $1 is the step count ONLY if it's all digits; a key=value first arg is a Hydra
 # override (e.g. tensorboard.logdir=...), kept in "$@" instead of becoming run.steps.
-STEPS=10000
+STEPS=50000
 case "${1:-}" in
     ''|*[!0-9]*) : ;;            # empty / non-numeric -> keep default, don't consume
     *) STEPS="$1"; shift ;;      # pure digits -> use as steps
