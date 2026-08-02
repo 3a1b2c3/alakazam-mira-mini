@@ -29,6 +29,13 @@ OUT="$1"; shift
 [ "${1:-}" = "--" ] && shift
 EXTRA=("$@")
 
+# Convenience: accept a checkpoint.pth or a checkpoint-<N> dir and resolve to the
+# run's output dir (so passing the ckpt path works too -- it watches that whole run).
+case "$OUT" in
+    */checkpoint.pth)    OUT="$(dirname "$(dirname "$OUT")")";;
+    */checkpoint-*[0-9]) OUT="$(dirname "$OUT")";;
+esac
+
 # resolve output_dir: absolute as-is, else relative to the mira repo (where runs live)
 case "$OUT" in /*) OUTDIR="$OUT";; *) OUTDIR="$mira/$OUT";; esac
 TBDIR="$OUTDIR/eval_tb"
