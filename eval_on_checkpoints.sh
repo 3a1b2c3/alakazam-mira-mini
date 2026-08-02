@@ -21,7 +21,15 @@ here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 RUN="${RUN:-pixi run --frozen}"
 INTERVAL="${INTERVAL:-60}"
-SAMPLES="${SAMPLES:-64}"
+SAMPLES="${SAMPLES:-16}"
+
+# Persist the torch.compile (inductor) + triton caches so only the FIRST checkpoint
+# eval pays the DINO/model compile cost; every later checkpoint hits the cache. The
+# DINO backbone is frozen and the model graph shape is constant across checkpoints,
+# so the compiled kernels are reused (weights are runtime inputs).
+export TORCHINDUCTOR_CACHE_DIR="${TORCHINDUCTOR_CACHE_DIR:-$HOME/.cache/torch/inductor}"
+export TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-$HOME/.cache/triton}"
+export TORCHINDUCTOR_FX_GRAPH_CACHE=1
 
 [ $# -ge 1 ] || { echo "usage: $0 <output_dir> [-- <extra eval_wm args>]"; exit 1; }
 OUT="$1"; shift
