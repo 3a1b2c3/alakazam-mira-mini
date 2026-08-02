@@ -22,4 +22,20 @@ if [ -z "$WM" ]; then
 fi
 [ -n "$WM" ] && [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint-52000 not found (run ./download_weights.sh 1b, or set WM=)"; exit 1; }
 
-exec "$here/train.sh" run.finetune_from="$WM" "$@"
+# Finetune gets its OWN output dir (-> its own tb + checkpoints), separate from
+# the scratch run's train_world_model_logs_scratch (train.sh's default). Otherwise
+# both share one tb/checkpoints dir and finetune would auto-resume off a SCRATCH
+# checkpoint. Override with FT_DIR= or run.output_dir=... in the args.
+mira="$here/../mira"
+FT_DIR="${FT_DIR:-train_world_model_logs_finetune}"
+
+# Warm-start (finetune_from) only on the FIRST run. Once $FT_DIR has a checkpoint,
+# train.sh auto-resumes it via run.continue_from -- which is mutually exclusive
+# with run.finetune_from, so passing finetune_from again would conflict.
+finetune_arg=(run.finetune_from="$WM")
+if ls "$mira/$FT_DIR"/checkpoints/checkpoint-*.pth >/dev/null 2>&1; then
+    echo "Existing finetune checkpoint in $FT_DIR -> resuming (train.sh continue_from); not re-warm-starting."
+    finetune_arg=()
+fi
+
+exec "$here/train.sh" run.output_dir="$FT_DIR" "${finetune_arg[@]}" "$@"
