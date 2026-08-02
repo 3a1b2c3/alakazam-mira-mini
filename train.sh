@@ -54,8 +54,22 @@ fi
 
 cd "$mira"
 export WANDB_MODE=offline
-# Point DINO loader to local weights
-export DINO_WEIGHTS_HOME="/home/horde/mira/dino_weights"
+# Point the DINO loader at the local weights. mira/src/mira/codec/dino.py reads
+# RS_DINO_WEIGHTS_DIR (NOT DINO_WEIGHTS_HOME); download_dino.sh stages them in
+# $mira/dino_weights. Respect an existing override.
+export RS_DINO_WEIGHTS_DIR="${RS_DINO_WEIGHTS_DIR:-$mira/dino_weights}"
+
+# Fail fast if DINO weights missing: otherwise dino.py falls back to torch.hub
+# (the HF DINOv3 mirrors are transformers-format, incompatible -> broken load),
+# so training would run with unreliable/absent DINO metrics. finetune.sh inherits
+# this guard via `exec train.sh`.
+vitl16="$RS_DINO_WEIGHTS_DIR/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
+vitb16="$RS_DINO_WEIGHTS_DIR/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+if [ ! -f "$vitl16" ] || [ ! -f "$vitb16" ]; then
+    echo "ERROR: DINO weights missing in $RS_DINO_WEIGHTS_DIR. Download first:"
+    echo "  cd $here && ./download_dino.sh"
+    exit 1
+fi
 
 # Auto-detect and resume from latest checkpoint if it exists
 output_dir=""

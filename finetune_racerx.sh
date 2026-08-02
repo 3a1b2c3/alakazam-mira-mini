@@ -58,6 +58,16 @@ fi
 
 # NOTE: Linux HAS NCCL -- the Windows LOCAL_RANK/RANK/... clearing is intentionally omitted.
 cd "$mira"
+
+# Fail if DINO weights missing (prevents training with unreliable metrics)
+vitl16="/home/horde/mira/dino_weights/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth"
+vitb16="/home/horde/mira/dino_weights/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth"
+if [ ! -f "$vitl16" ] || [ ! -f "$vitb16" ]; then
+    echo "ERROR: DINO weights missing. Download first:"
+    echo "  cd ~/alakazam-mira-mini && ./download_dino.sh"
+    exit 1
+fi
+
 echo "GPU free:"
 nvidia-smi --query-gpu=memory.free --format=csv,noheader || true
 echo "codec      = $CODEC"
