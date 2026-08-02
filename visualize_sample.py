@@ -202,24 +202,39 @@ def plot_sample(sample, title="MIRA Sample"):
     return fig
 
 
+def _numbered(path, idx):
+    """Insert _<idx> before the extension: out.png -> out_5.png."""
+    p = Path(path)
+    return str(p.with_name(f"{p.stem}_{idx}{p.suffix}"))
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Visualize a MIRA WebDataset sample (frames + keys + physics)")
+    parser = argparse.ArgumentParser(description="Visualize MIRA WebDataset samples (frames + keys + physics)")
     parser.add_argument("--data", required=True, help="Path to index.json")
-    parser.add_argument("--sample", type=int, default=0, help="Sample index (default 0)")
-    parser.add_argument("--output", help="Save figure to file instead of showing")
+    parser.add_argument("--start", type=int, default=0, help="First sample index (default 0)")
+    parser.add_argument("--count", type=int, default=1, help="Number of samples to render from --start (default 1)")
+    parser.add_argument("--output", help="Save figure(s); for count>1, _<idx> is inserted before the extension")
     args = parser.parse_args()
 
+    start = args.start
+    count = max(1, args.count)
+
     try:
-        sample = load_sample(args.data, args.sample)
-        print(f"  Shape: {sample['frames'].shape}")
-        print(f"  Duration: {sample['frames'].shape[0] / sample['meta'].get('fps', 20):.1f}s")
-        print()
-        fig = plot_sample(sample, title=f"Sample {args.sample}")
-        if args.output:
-            fig.savefig(args.output, dpi=100, bbox_inches="tight")
-            print(f"Saved to {args.output}")
-        else:
-            plt.show()
+        for idx in range(start, start + count):
+            sample = load_sample(args.data, idx)
+            print(f"  Shape: {sample['frames'].shape}")
+            print(f"  Duration: {sample['frames'].shape[0] / sample['meta'].get('fps', 20):.1f}s")
+            print()
+            fig = plot_sample(sample, title=f"Sample {idx}")
+            if args.output:
+                out = args.output if count == 1 else _numbered(args.output, idx)
+                fig.savefig(out, dpi=100, bbox_inches="tight")
+                print(f"Saved to {out}")
+            else:
+                plt.show()
+            plt.close(fig)
+    except IndexError as e:
+        print(f"Stopped: {e}")
     except Exception as e:
         print(f"ERROR: {e}")
         import traceback
