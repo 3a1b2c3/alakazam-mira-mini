@@ -85,17 +85,16 @@ if [ -z "$output_dir" ]; then
     output_dir="train_world_model_logs_scratch"
 fi
 
+# Checkpoints save as <output_dir>/checkpoint-<step>/checkpoint.pth (NOT
+# <output_dir>/checkpoints/checkpoint-<step>.pth) -- glob THAT so resume actually
+# fires. The old glob never matched, so runs never auto-resumed.
 continue_from=""
-if [ -n "$output_dir" ] && [ -d "$output_dir/checkpoints" ]; then
-    latest_ckpt=$(find "$output_dir/checkpoints" -name "checkpoint-*.pth" 2>/dev/null | \
-        sed 's/.*checkpoint-\([0-9]*\).*/\1/' | sort -n | tail -1)
-    if [ -n "$latest_ckpt" ]; then
-        ckpt_path="$output_dir/checkpoints/checkpoint-${latest_ckpt}.pth"
-        [ -f "$ckpt_path" ] && continue_from="run.continue_from=$ckpt_path"
-        if [ -n "$continue_from" ]; then
-            echo "Auto-resuming from: $ckpt_path (step $latest_ckpt)"
-        fi
-    fi
+latest_step=$(ls -d "$output_dir"/checkpoint-*/ 2>/dev/null \
+    | sed 's#.*/checkpoint-\([0-9]*\)/#\1#' | grep -xE '[0-9]+' | sort -n | tail -1)
+if [ -n "$latest_step" ] && [ -f "$output_dir/checkpoint-$latest_step/checkpoint.pth" ]; then
+    ckpt_path="$output_dir/checkpoint-$latest_step/checkpoint.pth"
+    continue_from="run.continue_from=$ckpt_path"
+    echo "Auto-resuming from: $ckpt_path (step $latest_step)"
 fi
 
 echo "GPU free:"

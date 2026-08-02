@@ -33,7 +33,7 @@ FT_DIR="${FT_DIR:-train_world_model_logs_finetune}"
 # train.sh auto-resumes it via run.continue_from -- which is mutually exclusive
 # with run.finetune_from, so passing finetune_from again would conflict.
 finetune_arg=(run.finetune_from="$WM")
-if ls "$mira/$FT_DIR"/checkpoints/checkpoint-*.pth >/dev/null 2>&1; then
+if ls "$mira/$FT_DIR"/checkpoint-*/checkpoint.pth >/dev/null 2>&1; then
     echo "Existing finetune checkpoint in $FT_DIR -> resuming (train.sh continue_from); not re-warm-starting."
     finetune_arg=()
 fi
