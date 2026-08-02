@@ -81,7 +81,14 @@ while true; do
             echo "  step $step -> psnr=$psnr lpips=${lpips:-?} ssim=${ssim:-?}" | tee -a "$LOG"
             write_tb "$step" "$psnr" "${lpips:-nan}" "${ssim:-nan}"
         else
-            echo "  step $step -> NO PSNR (metrics skipped? need vitb16 -> download_dino.sh)" | tee -a "$LOG"
+            if printf '%s\n' "$out" | grep -q "Traceback"; then
+                why="eval CRASHED -- tail $LOG"
+            elif printf '%s\n' "$out" | grep -qiE "skip.?metrics|skipping"; then
+                why="metrics skipped (vitb16 missing? -> download_dino.sh)"
+            else
+                why="no psnr line in output -- see $LOG"
+            fi
+            echo "  step $step -> NO PSNR: $why" | tee -a "$LOG"
         fi
         echo "$step" >> "$DONE"
     done
