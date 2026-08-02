@@ -83,6 +83,6 @@ exec $RUN python scripts/train_world_model.py --config-name finetune_world_model
     model.architecture.config.codec_checkpoint="$CODEC" "$STARTARG" \
     dataset.train_index="$REC/train/index.json" dataset.test_index="$TESTIDX" \
     run.batch_size=1 run.compile=true wandb.mode=disabled dataloader.num_workers="$WORKERS" \
-    run.steps="$STEPS" run.output_dir="$OUTDIR" run.checkpoint_every=15000 optim.scheduler.warmup_steps=200 \
+    run.steps="$STEPS" run.output_dir="$OUTDIR" run.checkpoint_every=15000 run.checkpoint_keep_recent=1 run.checkpoint_keep_permanent_every=-1 validation.downstream_val_every=15000 optim.scheduler.warmup_steps=200 \
     validation.val_n_samples=64 world_model_metrics.num_samples=128 \
     ++tensorboard.logdir="$OUTDIR/tb" "$@"
