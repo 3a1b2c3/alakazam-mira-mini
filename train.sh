@@ -54,6 +54,10 @@ fi
 
 cd "$mira"
 export WANDB_MODE=offline
+# Reduce CUDA fragmentation so the periodic world-model eval (DINO/Inception + rollout)
+# fits in the headroom left by the resident training model (the 47 GB A40 is tight:
+# ~36 GB training + ~10 GB eval). The OOM traceback explicitly recommends this.
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 # Point the DINO loader at the local weights. mira/src/mira/codec/dino.py reads
 # RS_DINO_WEIGHTS_DIR (NOT DINO_WEIGHTS_HOME); download_dino.sh stages them in
 # $mira/dino_weights. Respect an existing override.
