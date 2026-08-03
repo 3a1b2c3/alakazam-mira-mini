@@ -77,7 +77,7 @@ echo
         latest=$(ls -d codec_logs/checkpoint-*/checkpoint.pth 2>/dev/null | sed 's#.*/checkpoint-\([0-9]*\)/.*#\1#' | sort -n | tail -1)
         if [ -n "$latest" ] && [ -z "${evaluated[$latest]:-}" ]; then
             echo "[$(date '+%H:%M:%S')] Evaluating codec checkpoint-$latest..."
-            if python codec_recon_psnr.py --checkpoint "codec_logs/checkpoint-$latest/checkpoint.pth" --num-samples 16 2>&1 | tee -a codec_psnr_log.txt; then
+            if python "$here/codec_recon_psnr.py" --checkpoint "codec_logs/checkpoint-$latest/checkpoint.pth" --num-samples 16 2>&1 | tee -a codec_psnr_log.txt; then
                 evaluated[$latest]=1
             fi
         fi
