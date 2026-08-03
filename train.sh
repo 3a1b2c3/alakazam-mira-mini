@@ -26,22 +26,11 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run}"
 WORKERS="${WORKERS:-4}"
 
-# Custom codec from local training (codec_logs/), or fall back to frozen codec.
+# Use checkpoint-7000 from Horde (no frozen codec fallback)
 if [ -z "${CODEC:-}" ]; then
-    # Priority 1: custom trained codec (from scratch)
-    latest_codec=$(ls -d "$here/codec_logs/checkpoint-"*/ 2>/dev/null \
-        | sed 's#.*/checkpoint-\([0-9]*\)/#\1#' | grep -xE '[0-9]+' | sort -n | tail -1)
-    if [ -n "$latest_codec" ] && [ -f "$here/codec_logs/checkpoint-$latest_codec/checkpoint.pth" ]; then
-        CODEC="$here/codec_logs/checkpoint-$latest_codec/checkpoint.pth"
-        echo "Found custom codec (step $latest_codec), will use it"
-    else
-        # Priority 2: frozen codec from the downloaded mira-mini bundle
-        for s in "$HOME"/.cache/huggingface/hub/models--alakazamworld--mira-mini/snapshots/*/; do
-            [ -f "$s/codec/checkpoint-125000/checkpoint.pth" ] && CODEC="$s/codec/checkpoint-125000/checkpoint.pth"
-        done
-    fi
+    CODEC="/home/horde/mira/codec_logs/checkpoint-7000/checkpoint.pth"
 fi
-[ -n "${CODEC:-}" ] && [ -f "$CODEC" ] || { echo "ERROR: codec not found. Train one first: ./train_codec.sh run.steps=125000 (or set CODEC=)"; exit 1; }
+[ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 
 # Default data indices: sourced from data_paths.sh (get_data.sh) unless already set.
 [ -z "${TRAIN_INDEX:-}" ] && [ -f "$mira/data_paths.sh" ] && . "$mira/data_paths.sh"
