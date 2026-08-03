@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Linux mirror of train.bat. Train the MIRA latent world model on the FROZEN
-# mira-mini codec (125k), from scratch (no run.finetune_from). The sibling mira
-# repo (../mira) supplies scripts/configs and the pixi env.
+# Linux mirror of train.bat. Train the MIRA latent world model on a custom codec
+# from scratch (no run.finetune_from). Auto-detects codec from codec_logs/ (trained
+# via train_codec.sh), or falls back to frozen mira-mini codec if not found.
+# The sibling mira repo (../mira) supplies scripts/configs and the pixi env.
 #
 # Env:
 #   RUN     env prefix (default "pixi run --frozen"; "" if torch on PATH / venv active)
-#   CODEC   frozen codec .pth  (default: globbed from the mira-mini HF snapshot)
+#   CODEC   custom codec .pth  (default: auto-detect from codec_logs/, fall back to frozen mira-mini)
 #   TRAIN_INDEX / TEST_INDEX   data indices (default: sourced from mira/data_paths.sh
 #                              written by get_data.sh; else fall back to
 #                              $MIRA_WDS/{train,test}/index.json. A dataset.train_index=
@@ -25,13 +26,22 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run --frozen}"
 WORKERS="${WORKERS:-4}"
 
-# Frozen codec from the downloaded mira-mini bundle (globbed -> no hardcoded hash).
+# Custom codec from local training (codec_logs/), or fall back to frozen codec.
 if [ -z "${CODEC:-}" ]; then
-    for s in "$HOME"/.cache/huggingface/hub/models--alakazamworld--mira-mini/snapshots/*/; do
-        [ -f "$s/codec/checkpoint-125000/checkpoint.pth" ] && CODEC="$s/codec/checkpoint-125000/checkpoint.pth"
-    done
+    # Priority 1: custom trained codec (from scratch)
+    latest_codec=$(ls -d "$here/codec_logs/checkpoint-"*/ 2>/dev/null \
+        | sed 's#.*/checkpoint-\([0-9]*\)/#\1#' | grep -xE '[0-9]+' | sort -n | tail -1)
+    if [ -n "$latest_codec" ] && [ -f "$here/codec_logs/checkpoint-$latest_codec/checkpoint.pth" ]; then
+        CODEC="$here/codec_logs/checkpoint-$latest_codec/checkpoint.pth"
+        echo "Found custom codec (step $latest_codec), will use it"
+    else
+        # Priority 2: frozen codec from the downloaded mira-mini bundle
+        for s in "$HOME"/.cache/huggingface/hub/models--alakazamworld--mira-mini/snapshots/*/; do
+            [ -f "$s/codec/checkpoint-125000/checkpoint.pth" ] && CODEC="$s/codec/checkpoint-125000/checkpoint.pth"
+        done
+    fi
 fi
-[ -n "${CODEC:-}" ] && [ -f "$CODEC" ] || { echo "ERROR: codec not found (run ./download_weights.sh 1b, or set CODEC=)"; exit 1; }
+[ -n "${CODEC:-}" ] && [ -f "$CODEC" ] || { echo "ERROR: codec not found. Train one first: ./train_codec.sh run.steps=125000 (or set CODEC=)"; exit 1; }
 
 # Default data indices: sourced from data_paths.sh (get_data.sh) unless already set.
 [ -z "${TRAIN_INDEX:-}" ] && [ -f "$mira/data_paths.sh" ] && . "$mira/data_paths.sh"

@@ -47,6 +47,11 @@ def main() -> None:
                       help="disable the Apple fast stack (MLX + Core ML) and run plain torch")
     play.add_argument("--verbose", action="store_true",
                       help="show engine/runtime INFO logs (hidden by default)")
+    play.add_argument("--checkpoint", type=str, default=None, metavar="PATH",
+                      help="play a CUSTOM world-model checkpoint.pth (e.g. your own finetune) instead "
+                           "of the released --model weights. The --model bundle is still fetched for its "
+                           "codec + context; only the DiT weights are swapped. Must be the SAME "
+                           "architecture as --model (i.e. a finetune of it).")
     args = ap.parse_args()
     if args.cmd != "play":
         ap.print_help()
@@ -98,6 +103,19 @@ def main() -> None:
          + (f"  {DIM}first run downloads {size}, once{RESET}" if first_run else f"  {DIM}weights cached{RESET}"))
     bundle = ensure_weights(repo)
     ckpt = checkpoint_path(bundle)
+
+    # --checkpoint: swap the released DiT weights for a custom one (a finetune of
+    # --model). The bundle's codec + context are kept; only MIRA_CKPT changes. Force
+    # it (not setdefault) so it wins over both the bundle default and any stray env.
+    if args.checkpoint:
+        from pathlib import Path
+        custom = Path(args.checkpoint).expanduser()
+        if not custom.is_file():
+            print(f"  \033[31m✗\033[0m --checkpoint not found: {custom}", flush=True)
+            sys.exit(2)
+        ckpt = custom
+        os.environ["MIRA_CKPT"] = str(ckpt)
+        line("●", f"weights  {BOLD}custom checkpoint{RESET}  {DIM}{ckpt}{RESET}")
 
     # ---- Apple fast stack: wired automatically when the pieces are present ----
     # (MLX carries the transformer on Metal, a Core ML package carries the

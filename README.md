@@ -9,7 +9,7 @@ pip install alakazam-mira-mini
 mira-mini play
 ```
 
-Useful flags: `--interp` (2x display interpolation), `--steps N`, `--no-fast`, `--verbose`.
+Useful flags: `--checkpoint PATH` (play your own finetune), `--interp` (2x display interpolation), `--steps N`, `--no-fast`, `--verbose`.
 
 MIRA Mini is our from-scratch reproduction of the MIRA recipe
 ([General Intuition](https://www.generalintuition.com/) × [Kyutai](https://kyutai.org/),
@@ -35,14 +35,24 @@ Override it:
 
 ```
 mira-mini play --model 1b     # the 1B single-player model (needs a discrete GPU)
-mira-mini play --model 364m   # the laptop tier, anywhere
+mira-mini play --model 364m   # the laptop tier, 
 ```
+
+Play your **own finetune** instead of the released weights — the `--model` bundle
+is still fetched for its codec + context, only the DiT weights are swapped:
+
+```
+mira-mini play --model 1b --checkpoint C:\path\to\outputs\finetune_ch\checkpoint-49000\checkpoint.pth
+```
+
+The checkpoint must be the **same architecture** as `--model` (i.e. a finetune of it).
 
 ## Options
 
 | flag / env | effect |
 |---|---|
 | `--model {auto,1b,364m}` | which weights to run (default: auto, by device) |
+| `--checkpoint PATH` | play a custom `checkpoint.pth` (your finetune) with the `--model` codec/context |
 | `--steps N` | sampler steps; 2 is the steadier default, 1 is smoother but drifts more |
 | `--port N` | web UI port (default 8770) |
 | `--no-browser` | don't open the browser automatically |
