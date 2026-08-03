@@ -61,6 +61,6 @@ echo
 
 exec $RUN python scripts/train_codec.py \
     "${idx[@]}" \
-    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 run.checkpoint_every=5000 run.checkpoint_keep_recent=2 \
+    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 run.checkpoint_every=5000 run.checkpoint_keep_recent=2 validation.val_every=2500 \
     run.output_dir="codec_logs" \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"
