@@ -54,13 +54,42 @@ if [ ! -f "$vitl16" ] || [ ! -f "$vitb16" ]; then
     exit 1
 fi
 
+# Auto-detect and resume from latest checkpoint if it exists
+output_dir="codec_logs"
+continue_from=""
+latest_step=$(ls -d "$output_dir"/checkpoint-*/ 2>/dev/null \
+    | sed 's#.*/checkpoint-\([0-9]*\)/#\1#' | grep -xE '[0-9]+' | sort -n | tail -1)
+if [ -n "$latest_step" ] && [ -f "$output_dir/checkpoint-$latest_step/checkpoint.pth" ]; then
+    ckpt_path="$output_dir/checkpoint-$latest_step/checkpoint.pth"
+    continue_from="run.continue_from=$ckpt_path"
+    echo "Auto-resuming from: $ckpt_path (step $latest_step)"
+fi
+
 echo "GPU free:"
 nvidia-smi --query-gpu=memory.free --format=csv,noheader || true
 [ -n "${TRAIN_INDEX:-}" ] && { echo "train = $TRAIN_INDEX"; echo "test  = ${TEST_INDEX:-$TRAIN_INDEX}"; }
 echo
 
+# Start background PSNR monitor (evaluates each checkpoint)
+{
+    declare -A evaluated
+    while true; do
+        latest=$(ls -d codec_logs/checkpoint-*/checkpoint.pth 2>/dev/null | sed 's#.*/checkpoint-\([0-9]*\)/.*#\1#' | sort -n | tail -1)
+        if [ -n "$latest" ] && [ -z "${evaluated[$latest]:-}" ]; then
+            echo "[$(date '+%H:%M:%S')] Evaluating codec checkpoint-$latest..."
+            if python codec_recon_psnr.py --checkpoint "codec_logs/checkpoint-$latest/checkpoint.pth" --num-samples 16 2>&1 | tee -a codec_psnr_log.txt; then
+                evaluated[$latest]=1
+            fi
+        fi
+        sleep 5
+    done
+} &
+MONITOR_PID=$!
+trap "kill $MONITOR_PID 2>/dev/null" EXIT
+
 exec $RUN python scripts/train_codec.py \
     "${idx[@]}" \
     run.batch_size=2 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 run.checkpoint_every=5000 run.checkpoint_keep_recent=2 validation.val_every=2500 \
     run.output_dir="codec_logs" \
+    $continue_from \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"
