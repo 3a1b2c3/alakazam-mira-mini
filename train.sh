@@ -23,7 +23,7 @@ export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 mira="$here/../mira"
 [ -f "$mira/pixi.toml" ] || { echo "ERROR: mira trainer not found at $mira (clone it beside this repo)"; exit 1; }
-RUN="${RUN:-pixi run --frozen}"
+RUN="${RUN:-pixi run}"
 WORKERS="${WORKERS:-4}"
 
 # Custom codec from local training (codec_logs/), or fall back to frozen codec.
