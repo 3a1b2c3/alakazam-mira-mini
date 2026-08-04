@@ -22,8 +22,8 @@ if [ -z "$WM" ]; then
 fi
 [ -n "$WM" ] && [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint-52000 not found (run ./download_weights.sh 1b, or set WM=)"; exit 1; }
 
-# Use checkpoint-15000 codec (no frozen fallback) - better quality
-export CODEC="/home/horde/mira/codec_logs/checkpoint-15000/checkpoint.pth"
+# Use checkpoint-25000 codec (no frozen fallback) - better quality
+export CODEC="/home/horde/mira/codec_logs/checkpoint-25000/checkpoint.pth"
 
 # Finetune gets its OWN output dir (-> its own tb + checkpoints), separate from
 # the scratch run's train_world_model_logs_scratch (train.sh's default). Otherwise

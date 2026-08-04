@@ -96,6 +96,27 @@ def eval_codec(codec, frames, name="", save_images=False, output_dir=None, clip_
         return psnr
 
 def main():
+    import sys
+    from pathlib import Path
+
+    # Parse command-line arguments
+    num_samples = 10  # Default
+    trained_path = Path("outputs/codec_ckpt_15000.pth")  # Default
+
+    for arg in sys.argv[1:]:
+        if Path(arg).exists():
+            # Checkpoint path provided
+            trained_path = Path(arg)
+        else:
+            try:
+                # Sample count provided
+                num_samples = int(arg)
+            except ValueError:
+                print(f"Usage: python eval_on_shard.py [checkpoint_path] [num_samples]")
+                print(f"  checkpoint_path: codec checkpoint file (default: outputs/codec_ckpt_15000.pth)")
+                print(f"  num_samples: number of tar files to evaluate (default: 10)")
+                return False
+
     shard_dir = Path(r"C:\recordings\mira_wds\test\000")
 
     if not shard_dir.exists():
@@ -126,8 +147,7 @@ def main():
             except Exception as e:
                 print(f"  Failed: {e}")
 
-    print("Loading trained codec (checkpoint-15000)...")
-    trained_path = Path("outputs/codec_ckpt_15000.pth")
+    print(f"Loading trained codec ({trained_path.name})...")
     trained_codec = None
     if trained_path.exists():
         try:
@@ -140,8 +160,9 @@ def main():
         print("ERROR: No codecs loaded")
         return False
 
-    # Output directory for images
-    output_dir = Path("outputs/shard_000_frozen_vs_trained_15000")
+    # Output directory for images (include checkpoint name and sample count)
+    ckpt_name = trained_path.stem  # e.g., "codec_ckpt_15000"
+    output_dir = Path(f"outputs/shard_000_frozen_vs_{ckpt_name}_n{num_samples}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Evaluate
@@ -152,7 +173,7 @@ def main():
     frozen_psnrs = []
     trained_psnrs = []
 
-    for i, tar_file in enumerate(tar_files[:10]):  # First 10 tar files
+    for i, tar_file in enumerate(tar_files[:num_samples]):  # Configurable number of tar files
         frames, clip_id = load_video_from_tar(tar_file, num_frames=8)
 
         if frames is None:
