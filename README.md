@@ -110,3 +110,145 @@ The banner shows the installed version.
 ## 0.1.10
 
 Animated loading spinner with elapsed time; engine logs are hidden by default (`--verbose` restores them).
+
+---
+
+# Training & Finetuning Guide
+
+## Current Status
+
+**Codec Training (Step 1):** ✅ Active
+- Checkpoint-15000: **22.49 dB PSNR** (latest)
+- Progress: 20.46 → 21.76 → 22.49 dB (+2.03 dB total)
+- Training continues on Horde (checkpoint every 5000 steps)
+- Next target: checkpoint-20000 (~23-24 dB estimated)
+
+**World Model Finetuning (Step 2):** ⏭️ Ready to deploy
+- Warm-start: mira-mini checkpoint-52000 (1B diffusion model)
+- Codec: checkpoint-15000 (22.49 dB, best so far)
+- Data: RacerX mira_wds
+- Command: `bash finetune.sh` on Horde
+
+**Evaluation:** ✅ Comprehensive
+- Primary: `codec_recon_psnr.py` (batch PSNR on test data)
+- Encoder analysis: `eval_encoder_only.py` (192x compression bottleneck)
+- Single-file: `eval_frozen_on_real_video.py` (Rocket League comparison)
+- Shard eval: `eval_on_shard.py` (batch WebDataset evaluation)
+
+---
+
+## Key Finding: Encoder Bottleneck
+
+**Frozen encoder compresses by ~60x**, limiting photorealism to ~13 dB PSNR.
+- Encoder determines how much info is preserved (bottleneck)
+- Decoder can only reconstruct what's in latent
+- Training improves: frozen 12.84 dB → trained 16.26 dB (+3.4 dB)
+
+**To improve photorealism:**
+1. Larger latent (less compression)
+2. Better encoder (more efficient compression)
+3. More training (encoder learns better representations)
+
+**Evaluation:** See `eval_encoder_only.py` for split-screen test set analysis.
+
+---
+
+## Codec Training (Step 1)
+
+Train a RAEv2 video codec on RacerX data.
+
+```bash
+# On Horde (from alakazam-mira-mini/)
+bash train_codec.sh
+
+# Custom steps
+bash train_codec.sh run.steps=200000 run.batch_size=2
+```
+
+**Progress:**
+- Checkpoint-7000: 20.46 dB PSNR
+- Checkpoint-10000: 21.76 dB PSNR (+1.3 dB)
+- Checkpoint-15000: 22.49 dB PSNR (+0.73 dB) ✅
+- Target: ~28.6 dB (continuing...)
+
+**Evaluate locally:**
+```powershell
+python codec_recon_psnr.py \
+  --data C:\recordings\mira_wds\train\index.json \
+  --codec outputs\codec_ckpt_7000.pth \
+  --num-samples 32
+```
+
+## World Model Finetuning (Step 2)
+
+Finetune 1B diffusion model (mira-mini checkpoint-52000) on RacerX.
+
+```bash
+# On Horde
+scp finetune.sh horde@10.57.233.223:/home/horde/alakazam-mira-mini/
+ssh horde@10.57.233.223 "cd alakazam-mira-mini && bash finetune.sh"
+```
+
+**Uses:**
+- Warm-start: mira-mini checkpoint-52000
+- Codec: checkpoint-7000 (or better, from step 1)
+- Data: RacerX WebDataset (mira_wds)
+
+**Local exploration:**
+```powershell
+# Inspect checkpoint
+.\.venv\Scripts\python.exe inspect_checkpoint.py
+
+# Visualize input/target frames
+.\.venv\Scripts\python.exe infer_world_model.py
+
+# Interactive player
+.\.venv\Scripts\python.exe interactive_wm.py
+# Commands: load 0, show, export, list, info, quit
+```
+
+## Checkpoints
+
+| Name | Type | Path | Size | Quality |
+|------|------|------|------|---------|
+| codec-7000 | Codec | `codec_logs/checkpoint-7000/` | 3.6 GB | 20.46 dB |
+| codec-10000 | Codec | `codec_logs/checkpoint-10000/` | 3.6 GB | 21.76 dB |
+| codec-15000 | Codec | `codec_logs/checkpoint-15000/` | 3.6 GB | 22.49 dB ✅ |
+| wm-21000 | World Model | `outputs/scratch_ch/checkpoint-56000/checkpoint-21000-horde.pth` | 7.79 GB | Loss: 0.061 |
+| wm-49000 | World Model | Baseline from step 2 | - | - |
+
+## Playing Custom Finetune
+
+Run locally after training:
+
+```bash
+mira-mini play --checkpoint C:\path\to\outputs\finetune_ch\checkpoint-49000\checkpoint.pth
+```
+
+## Scripts
+
+### Codec Training
+- `train_codec.sh` - Train codec from scratch (step 1)
+
+### Codec Evaluation
+- `codec_recon_psnr.py` - Batch PSNR evaluation (primary tool)
+- `eval_codec_checkpoints.py` - Compare multiple checkpoints
+- `eval_encoder_only.py` - Encoder bottleneck analysis (frozen vs trained)
+- `eval_frozen_on_real_video.py` - Single Rocket League video comparison
+- `eval_on_shard.py` - WebDataset shard batch evaluation
+- `visualize_codec_real.py` - Real data visualization + split-screens
+
+### World Model Training
+- `finetune.sh` - Finetune world model (step 2, recommended)
+- `train.sh` - Train from scratch (alternative)
+
+### World Model Evaluation & Exploration
+- `inspect_checkpoint.py` - Inspect checkpoint structure (state_dict, size, etc.)
+- `infer_world_model.py` - Extract input/target frames from checkpoint
+- `interactive_wm.py` - Menu-driven checkpoint explorer
+
+### Utilities
+- `download_checkpoint.py` - Download from Horde via SFTP
+- `upload_checkpoint.py` - Upload to Horde via SFTP
+- `test_codec.py` - Quick codec load/encode/decode test
+- `eval_and_infer.bat` - Batch wrapper for evaluation + inference

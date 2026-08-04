@@ -26,9 +26,9 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run}"
 WORKERS="${WORKERS:-4}"
 
-# Use checkpoint-7000 from Horde (no frozen codec fallback)
+# Use checkpoint-15000 from Horde (no frozen codec fallback)
 if [ -z "${CODEC:-}" ]; then
-    CODEC="/home/horde/mira/codec_logs/checkpoint-7000/checkpoint.pth"
+    CODEC="/home/horde/mira/codec_logs/checkpoint-15000/checkpoint.pth"
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 
