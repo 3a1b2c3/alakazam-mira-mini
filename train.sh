@@ -26,11 +26,15 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run}"
 WORKERS="${WORKERS:-4}"
 
-# Use checkpoint-25000 from Horde (no frozen codec fallback)
+# Use checkpoint-25000 from Horde (best codec quality before divergence at 30k)
 if [ -z "${CODEC:-}" ]; then
     CODEC="/home/horde/mira/codec_logs/checkpoint-25000/checkpoint.pth"
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
+
+# LR decay for stable codec training (prevent 25k→30k divergence):
+#   ./train.sh optimizer.lr=1e-5 optimizer.schedule=cosine_warmup
+# Default: linear decay. Add to "$@" to override.
 
 # Default data indices: sourced from data_paths.sh (get_data.sh) unless already set.
 [ -z "${TRAIN_INDEX:-}" ] && [ -f "$mira/data_paths.sh" ] && . "$mira/data_paths.sh"
