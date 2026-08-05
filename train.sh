@@ -32,9 +32,9 @@ if [ -z "${CODEC:-}" ]; then
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 
-# LR decay for stable codec training (prevent 25k→30k divergence):
-#   ./train.sh optimizer.lr=1e-5 optimizer.schedule=cosine_warmup
-# Default: linear decay. Add to "$@" to override.
+# LR decay for stable world model training:
+#   ./train.sh +optimizer.lr=1e-5 +optimizer.schedule=cosine_warmup
+# Note: Use + prefix to add new config keys to Hydra overrides.
 
 # Default data indices: sourced from data_paths.sh (get_data.sh) unless already set.
 [ -z "${TRAIN_INDEX:-}" ] && [ -f "$mira/data_paths.sh" ] && . "$mira/data_paths.sh"
