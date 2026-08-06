@@ -94,7 +94,7 @@ OPT_DEFAULTS=(
     "+optimizer.schedule=cosine_warmup"
     "+optimizer.warmup_steps=3000"
     "+model.grad_clip=1.0"
-    "+model.loss.weights.dino_latent_consistency_frame_frac=0.1"
+    "++model.loss.weights.dino_latent_consistency_frame_frac=0.1"
 )
 # Override examples:
 #   ./train_codec.sh +optimizer.lr=5e-5          (lower LR if diverging)
