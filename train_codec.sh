@@ -88,15 +88,22 @@ echo
 MONITOR_PID=$!
 trap "kill $MONITOR_PID 2>/dev/null" EXIT
 
-# LR decay (prevent divergence at step 25k->30k):
-#   Default: cosine annealing with lr=1e-4
-#   Higher: ./train_codec.sh +optimizer.lr=5e-4
-#   Lower:  ./train_codec.sh +optimizer.lr=1e-5
+# Optimizer defaults (prevent divergence at step 25k->30k):
+OPT_DEFAULTS=(
+    "+optimizer.lr=1e-4"
+    "+optimizer.schedule=cosine_warmup"
+    "+optimizer.warmup_steps=3000"
+    "+model.grad_clip=1.0"
+)
+# Override examples:
+#   ./train_codec.sh +optimizer.lr=5e-5          (lower LR if diverging)
+#   ./train_codec.sh run.steps=100000            (longer training, better quality)
+#   ./train_codec.sh +optimizer.lr=5e-4          (more aggressive learning)
 
 exec $RUN python scripts/train_codec.py \
     "${idx[@]}" \
+    "${OPT_DEFAULTS[@]}" \
     run.batch_size=2 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 run.checkpoint_every=5000 run.checkpoint_keep_recent=2 validation.val_every=2500 \
-    +optimizer.lr=1e-4 +optimizer.schedule=cosine_warmup +optimizer.warmup_steps=2000 \
     run.output_dir="codec_logs" \
     $continue_from \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"

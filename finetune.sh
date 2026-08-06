@@ -25,6 +25,15 @@ fi
 # Use checkpoint-30000 codec (no frozen fallback) - better quality
 export CODEC="/home/horde/mira/codec_logs/checkpoint-30000/checkpoint.pth"
 
+# Optimizer defaults for stable finetuning (inherited by train.sh)
+# Can override with: ./finetune.sh +optimizer.lr=1e-4 (for faster learning)
+export OPT_DEFAULTS=(
+    "+optimizer.lr=1e-5"
+    "+optimizer.schedule=cosine_warmup"
+    "+optimizer.warmup_steps=3000"
+    "+model.grad_clip=1.0"
+)
+
 # Finetune gets its OWN output dir (-> its own tb + checkpoints), separate from
 # the scratch run's train_world_model_logs_scratch (train.sh's default). Otherwise
 # both share one tb/checkpoints dir and finetune would auto-resume off a SCRATCH

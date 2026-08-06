@@ -32,9 +32,20 @@ if [ -z "${CODEC:-}" ]; then
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 
-# LR decay for stable world model training:
-#   ./train.sh +optimizer.lr=1e-5 +optimizer.schedule=cosine_warmup
-# Note: Use + prefix to add new config keys to Hydra overrides.
+# Optimizer defaults for stable world model training (can be overridden in "$@")
+OPT_DEFAULTS=(
+    "+optimizer.lr=1e-5"
+    "+optimizer.schedule=cosine_warmup"
+    "+optimizer.warmup_steps=3000"
+    "+model.grad_clip=1.0"
+    "run.checkpoint_every=7000"
+    "run.log_every=50"
+    "validation.downstream_val_every=7000"
+)
+# Examples to override:
+#   ./train.sh +optimizer.lr=5e-5          (lower LR if diverging)
+#   ./train.sh run.steps=200000            (longer training)
+#   ./train.sh +optimizer.schedule=constant (constant LR instead of cosine)
 
 # Default data indices: sourced from data_paths.sh (get_data.sh) unless already set.
 [ -z "${TRAIN_INDEX:-}" ] && [ -f "$mira/data_paths.sh" ] && . "$mira/data_paths.sh"
@@ -113,7 +124,8 @@ echo
 exec $RUN python scripts/train_world_model.py \
     model.architecture.config.codec_checkpoint="$CODEC" \
     "${idx[@]}" \
-    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 validation.downstream_val_every=7000 run.checkpoint_every=7000 run.checkpoint_keep_recent=2 \
+    "${OPT_DEFAULTS[@]}" \
+    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.checkpoint_keep_recent=2 \
     world_model_metrics.num_samples=32 world_model_metrics.dino_max_chunk_size=32 \
     run.output_dir="$output_dir" \
     $continue_from \
