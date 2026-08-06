@@ -25,19 +25,20 @@ Evaluated on 16 RacerX test clips:
 | Mean PSNR | 23.71 dB | +0.36 dB |
 | Status | ✓ Improved |
 
-### Extended Codec Eval: codec_ckpt_25000 vs codec_ckpt_33000 (Aug 6, 2026)
+### Extended Codec Eval: codec_ckpt_25000 vs codec_ckpt_33000 vs codec_ckpt_39000 (Aug 6, 2026)
 
 Evaluated on 32 RacerX test clips:
 
 | Checkpoint | Mean PSNR | Clips | Gap to Target | Status |
 |---|---|---|---|---|
 | codec_ckpt_25000 | 23.23 dB | 32 | 5.37 dB | Baseline |
-| codec_ckpt_33000 | 24.60 dB | 32 | 4.00 dB | **Best** ✓ |
+| codec_ckpt_33000 | 24.60 dB | 32 | 4.00 dB | Intermediate |
+| codec_ckpt_39000 | 25.16 dB | 32 | 3.44 dB | **Best** ✓ |
 | Target | 28.60 dB | — | — | Out of reach |
 
-**Key Finding**: codec_ckpt_33000 (+1.37 dB vs 25000) is best available. Still 4.0 dB below target due to RL→RacerX domain transfer ceiling (not codec capacity).
+**Key Finding**: codec_ckpt_39000 (+0.56 dB vs 33k, +1.93 dB vs 25k) is best observed. Still 3.44 dB below target due to RL→RacerX domain transfer ceiling. Training shows steady improvement (33k→39k), may continue beyond 50k goal.
 
-**Decision**: Use `codec_ckpt_33000` for Phase 3 WM finetuning. Updated train.sh, finetune.sh, finetune_phase3.sh to use checkpoint-33000.
+**Decision**: Use `codec_ckpt_39000` for Phase 3 WM finetuning. Updated train.sh, finetune.sh, finetune_phase3.sh to use checkpoint-39000.
 
 ### Training Fix Applied
 Added cosine annealing with warmup to prevent future codec divergence:

@@ -50,14 +50,14 @@ outputs\codec_ckpt_33000.pth (best codec, 24.60 dB PSNR on RacerX)
 ```powershell
 cd C:\workspace\world\alakazam-mira-mini
 
-# Generate with best WM checkpoint
-.\generate_video_racerx.bat outputs\wm_ckpt_98000.pth
+# Generate with best WM checkpoint (use generate_video_with_actions.bat)
+.\generate_video_with_actions.bat outputs\wm_ckpt_98000.pth
 
-# Generate with codec checkpoint
-.\generate_video_racerx.bat outputs\codec_checkpoint-30000\checkpoint.pth
+# Generate with best codec checkpoint
+.\generate_video_with_actions.bat outputs\codec_ckpt_33000.pth
 
 # List all available checkpoints
-dir /b outputs\wm_ckpt_*.pth
+dir /b outputs\*.pth
 ```
 
 ## Output
