@@ -94,7 +94,6 @@ OPT_DEFAULTS=(
     "+optimizer.schedule=cosine_warmup"
     "+optimizer.warmup_steps=3000"
     "+model.grad_clip=1.0"
-    "++model.loss.weights.dino_latent_consistency_frame_frac=0.1"
 )
 # Override examples:
 #   ./train_codec.sh +optimizer.lr=5e-5          (lower LR if diverging)
@@ -104,7 +103,7 @@ OPT_DEFAULTS=(
 exec $RUN python scripts/train_codec.py \
     "${idx[@]}" \
     "${OPT_DEFAULTS[@]}" \
-    run.batch_size=2 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 run.checkpoint_every=3000 run.checkpoint_keep_recent=2 validation.val_every=2500 \
+    run.batch_size=2 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.log_every=50 run.checkpoint_every=3000 run.checkpoint_keep_recent=2 validation.val_every=3000 \
     run.output_dir="codec_logs" \
     $continue_from \
     '++tensorboard.logdir=${run.output_dir}/tb' "$@"
