@@ -11,9 +11,15 @@ set -uo pipefail
 export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
 
-# Warm-start from proven checkpoint (98k, before 112k degradation)
-WM="${WM:-$here/outputs/wm_ckpt_98000.pth}"
-[ -f "$WM" ] || { echo "ERROR: warm-start checkpoint not found: $WM"; exit 1; }
+# Warm-start from best available checkpoint (latest from scratch training, fallback to outputs)
+WM="${WM:-}"
+if [ -z "$WM" ]; then
+    latest_step=$(ls -d "$mira/train_world_model_logs_scratch"/checkpoint-*/ 2>/dev/null | sed 's#.*/checkpoint-\([0-9]*\)/#\1#' | grep -xE '[0-9]+' | sort -n | tail -1)
+    [ -n "$latest_step" ] && [ -f "$mira/train_world_model_logs_scratch/checkpoint-$latest_step/checkpoint.pth" ] && WM="$mira/train_world_model_logs_scratch/checkpoint-$latest_step/checkpoint.pth"
+    [ -z "$WM" ] && [ -f "$here/outputs/wm_ckpt_98000.pth" ] && WM="$here/outputs/wm_ckpt_98000.pth"
+fi
+[ -n "$WM" ] && [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint not found"; exit 1; }
+echo "Warm-starting from: $WM"
 
 # Best codec from Phase 1 (update after evaluation determines peak)
 export CODEC="/home/horde/mira/codec_logs/checkpoint-40000/checkpoint.pth"
