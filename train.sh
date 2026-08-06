@@ -125,7 +125,7 @@ exec $RUN python scripts/train_world_model.py \
     model.architecture.config.codec_checkpoint="$CODEC" \
     "${idx[@]}" \
     "${OPT_DEFAULTS[@]}" \
-    run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.checkpoint_keep_recent=2 \
+    run.batch_size=2 run.compile=false wandb.mode=disabled dataloader.num_workers="$WORKERS" run.checkpoint_keep_recent=2 \
     world_model_metrics.num_samples=32 world_model_metrics.dino_max_chunk_size=32 \
     run.output_dir="$output_dir" \
     $continue_from \
