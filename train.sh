@@ -26,9 +26,9 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run}"
 WORKERS="${WORKERS:-4}"
 
-# Use checkpoint-30000 from Horde (best codec quality)
+# Use checkpoint-33000 from Horde (best codec quality, 24.60 dB PSNR)
 if [ -z "${CODEC:-}" ]; then
-    CODEC="/home/horde/mira/codec_logs/checkpoint-30000/checkpoint.pth"
+    CODEC="/home/horde/mira/codec_logs/checkpoint-33000/checkpoint.pth"
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 

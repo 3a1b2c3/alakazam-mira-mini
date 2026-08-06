@@ -22,8 +22,8 @@ fi
 [ -n "$WM" ] && [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint not found"; exit 1; }
 echo "Warm-starting from: $WM"
 
-# Best codec from Phase 1 (checkpoint-30000 = current best; update after Phase 1 eval determines peak)
-export CODEC="/home/horde/mira/codec_logs/checkpoint-30000/checkpoint.pth"
+# Best codec from Phase 1: checkpoint-33000 (24.60 dB PSNR on RacerX test)
+export CODEC="/home/horde/mira/codec_logs/checkpoint-33000/checkpoint.pth"
 
 # Conservative finetuning settings
 export OPT_DEFAULTS=(

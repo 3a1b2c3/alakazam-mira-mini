@@ -118,14 +118,14 @@ Animated loading spinner with elapsed time; engine logs are hidden by default (`
 ## Current Status
 
 **Codec Training (Step 1):** ✅ Active
-- Checkpoint-15000: **22.49 dB PSNR** (latest)
-- Progress: 20.46 → 21.76 → 22.49 dB (+2.03 dB total)
+- Checkpoint-25000: **Latest** (TBD dB PSNR)
+- Progress: 20.46 → 21.76 → 22.49 → 22.xx dB (continuing)
 - Training continues on Horde (checkpoint every 5000 steps)
-- Next target: checkpoint-20000 (~23-24 dB estimated)
+- scripts now use checkpoint-25000 (not frozen)
 
 **World Model Finetuning (Step 2):** ⏭️ Ready to deploy
 - Warm-start: mira-mini checkpoint-52000 (1B diffusion model)
-- Codec: checkpoint-15000 (22.49 dB, best so far)
+- Codec: checkpoint-25000 (latest trained, not frozen)
 - Data: RacerX mira_wds
 - Command: `bash finetune.sh` on Horde
 
@@ -168,7 +168,8 @@ bash train_codec.sh run.steps=200000 run.batch_size=2
 **Progress:**
 - Checkpoint-7000: 20.46 dB PSNR
 - Checkpoint-10000: 21.76 dB PSNR (+1.3 dB)
-- Checkpoint-15000: 22.49 dB PSNR (+0.73 dB) ✅
+- Checkpoint-15000: 22.49 dB PSNR (+0.73 dB)
+- Checkpoint-25000: TBD dB PSNR (in progress) ✅
 - Target: ~28.6 dB (continuing...)
 
 **Evaluate locally:**
@@ -191,7 +192,7 @@ ssh horde@10.57.233.223 "cd alakazam-mira-mini && bash finetune.sh"
 
 **Uses:**
 - Warm-start: mira-mini checkpoint-52000
-- Codec: checkpoint-7000 (or better, from step 1)
+- Codec: checkpoint-25000 (trained, not frozen)
 - Data: RacerX WebDataset (mira_wds)
 
 **Local exploration:**
@@ -213,7 +214,8 @@ ssh horde@10.57.233.223 "cd alakazam-mira-mini && bash finetune.sh"
 |------|------|------|------|---------|
 | codec-7000 | Codec | `codec_logs/checkpoint-7000/` | 3.6 GB | 20.46 dB |
 | codec-10000 | Codec | `codec_logs/checkpoint-10000/` | 3.6 GB | 21.76 dB |
-| codec-15000 | Codec | `codec_logs/checkpoint-15000/` | 3.6 GB | 22.49 dB ✅ |
+| codec-15000 | Codec | `codec_logs/checkpoint-15000/` | 3.6 GB | 22.49 dB |
+| codec-25000 | Codec | `codec_logs/checkpoint-25000/` | 3.6 GB | TBD dB ✅ |
 | wm-21000 | World Model | `outputs/scratch_ch/checkpoint-56000/checkpoint-21000-horde.pth` | 7.79 GB | Loss: 0.061 |
 | wm-49000 | World Model | Baseline from step 2 | - | - |
 

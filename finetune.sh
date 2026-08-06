@@ -22,8 +22,8 @@ if [ -z "$WM" ]; then
 fi
 [ -n "$WM" ] && [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint-52000 not found (run ./download_weights.sh 1b, or set WM=)"; exit 1; }
 
-# Use checkpoint-30000 codec (no frozen fallback) - better quality
-export CODEC="/home/horde/mira/codec_logs/checkpoint-30000/checkpoint.pth"
+# Use checkpoint-33000 codec (best, 24.60 dB PSNR on RacerX)
+export CODEC="/home/horde/mira/codec_logs/checkpoint-33000/checkpoint.pth"
 
 # Optimizer defaults for stable finetuning (inherited by train.sh)
 # Can override with: ./finetune.sh +optimizer.lr=1e-4 (for faster learning)

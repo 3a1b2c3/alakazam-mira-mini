@@ -25,7 +25,19 @@ Evaluated on 16 RacerX test clips:
 | Mean PSNR | 23.71 dB | +0.36 dB |
 | Status | ✓ Improved |
 
-**Decision**: Use `codec_checkpoint-30000/checkpoint.pth` as default. Both far below target (28.6 dB) due to domain transfer (RL→RacerX codec bottleneck), but 30k incrementally better. Updated finetune.sh & train.sh to use checkpoint-30000.
+### Extended Codec Eval: codec_ckpt_25000 vs codec_ckpt_33000 (Aug 6, 2026)
+
+Evaluated on 32 RacerX test clips:
+
+| Checkpoint | Mean PSNR | Clips | Gap to Target | Status |
+|---|---|---|---|---|
+| codec_ckpt_25000 | 23.23 dB | 32 | 5.37 dB | Baseline |
+| codec_ckpt_33000 | 24.60 dB | 32 | 4.00 dB | **Best** ✓ |
+| Target | 28.60 dB | — | — | Out of reach |
+
+**Key Finding**: codec_ckpt_33000 (+1.37 dB vs 25000) is best available. Still 4.0 dB below target due to RL→RacerX domain transfer ceiling (not codec capacity).
+
+**Decision**: Use `codec_ckpt_33000` for Phase 3 WM finetuning. Updated train.sh, finetune.sh, finetune_phase3.sh to use checkpoint-33000.
 
 ### Training Fix Applied
 Added cosine annealing with warmup to prevent future codec divergence:
@@ -88,9 +100,9 @@ Rationale: Prevents divergence like codec step 25k→30k where uncontrolled LR l
 ## World Model Training Configuration
 File: `train.sh` (alakazam-mira-mini)
 
-Updated to use codec_ckpt_25000.pth and LR decay:
+Updated to use codec checkpoint-33000 (best: 24.60 dB PSNR) and LR decay:
 ```bash
-CODEC="/home/horde/mira/codec_logs/checkpoint-30000/checkpoint.pth"  # line 31 — using best checkpoint
+CODEC="/home/horde/mira/codec_logs/checkpoint-33000/checkpoint.pth"  # line 31 — best codec
 +optimizer.lr=1e-5 +optimizer.schedule=cosine_warmup  # Stable training
 ```
 
@@ -176,7 +188,8 @@ python scripts/eval_world_model_offline.py C:\workspace\world\alakazam-mira-mini
 Result: JSON file in checkpoint's output dir with scalar gFID/gFDD + Fréchet curves.
 
 ## Next Steps
-1. Complete Wan2.1 model download (~10-20 GB)
-2. Run HyDRA inference test once download complete
-3. Measure gFID on checkpoint-98000 using eval_world_model_offline.py
-4. Consider action guidance implementation for controllability improvement
+1. ✓ Validate WM training plateau (98k is best)
+2. **Start Phase 1**: Codec training (50k-100k steps) to improve PSNR from 23.7→27+ dB
+3. **Phase 3**: Finetune WM with new codec (150k steps)
+4. Complete Wan2.1 model download for HyDRA (~10-20 GB)
+5. Run HyDRA inference test
