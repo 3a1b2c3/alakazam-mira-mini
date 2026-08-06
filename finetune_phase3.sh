@@ -10,6 +10,7 @@
 set -uo pipefail
 export HYDRA_FULL_ERROR=1
 here="$(cd "$(dirname "$0")" && pwd)"
+mira="$here/../mira"
 
 # Warm-start from best available checkpoint (latest from scratch training, fallback to outputs)
 WM="${WM:-}"
@@ -32,7 +33,6 @@ export OPT_DEFAULTS=(
     "+model.grad_clip=1.0"
 )
 
-mira="$here/../mira"
 FT_DIR="${FT_DIR:-train_world_model_logs_scratch}"
 
 finetune_arg=(run.finetune_from="$WM")
