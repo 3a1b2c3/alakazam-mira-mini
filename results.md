@@ -25,7 +25,7 @@ Evaluated on 16 RacerX test clips:
 | Mean PSNR | 23.71 dB | +0.36 dB |
 | Status | ✓ Improved |
 
-### Extended Codec Eval: codec_ckpt_25000 vs codec_ckpt_39000 vs codec_ckpt_42000 (Aug 6, 2026)
+### Extended Codec Eval: codec_ckpt_25000 vs codec_ckpt_39000 vs codec_ckpt_42000 vs codec_ckpt_45000 (Aug 6, 2026)
 
 Evaluated on 32 RacerX test clips:
 
@@ -33,12 +33,13 @@ Evaluated on 32 RacerX test clips:
 |---|---|---|---|---|
 | codec_ckpt_25000 | 23.23 dB | 32 | 5.37 dB | Baseline |
 | codec_ckpt_39000 | 25.16 dB | 32 | 3.44 dB | Intermediate |
-| codec_ckpt_42000 | 25.29 dB | 32 | 3.31 dB | **Best** ✓ |
+| codec_ckpt_42000 | 25.29 dB | 32 | 3.31 dB | Intermediate |
+| codec_ckpt_45000 | 25.40 dB | 32 | 3.20 dB | **Best** ✓ |
 | Target | 28.60 dB | — | — | Out of reach |
 
-**Key Finding**: codec_ckpt_42000 (+0.13 dB vs 39k, +2.06 dB vs 25k) is best observed. Still 3.31 dB below target due to RL→RacerX domain transfer ceiling. Training shows steady improvement (25k→39k→42k), diminishing returns suggest peak near 45k-50k.
+**Key Finding**: codec_ckpt_45000 (+0.11 dB vs 42k, +2.17 dB vs 25k) is best observed. Still 3.20 dB below target due to RL→RacerX domain transfer ceiling. Training shows steady improvement (25k→39k→42k→45k), diminishing returns suggest peak approaching 50k.
 
-**Decision**: Use `codec_ckpt_42000` for Phase 3 WM finetuning. Updated train.sh, finetune.sh, finetune_phase3.sh to use checkpoint-42000.
+**Decision**: Use `codec_ckpt_45000` for Phase 3 WM finetuning. Updated train.sh, finetune.sh, finetune_phase3.sh to use checkpoint-45000.
 
 ### Training Fix Applied
 Added cosine annealing with warmup to prevent future codec divergence:
