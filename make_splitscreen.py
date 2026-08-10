@@ -1,78 +1,66 @@
 #!/usr/bin/env python3
-"""Make split-screen comparison images: LEFT = original (input), RIGHT = encoded (recon).
+"""Create side-by-side splitscreen video (generated vs ground truth)"""
 
-Pairs every ``*_input.png`` with its ``*_recon.png`` sibling in a directory and
-writes ``*_split.png`` (original | encoded, labelled). Default dir is the frozen
-codec eval output.
-
-Usage:
-  python make_splitscreen.py [DIR]
-  python make_splitscreen.py C:\\workspace\\world\\alakazam-mira-mini\\outputs\\frozen_codec_eval
-"""
-import sys
+import cv2
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+def create_splitscreen(real_path, gen_path, output_path):
+    """Create side-by-side comparison"""
+    print(f"Creating splitscreen for {Path(gen_path).name}...")
 
-DEFAULT_DIR = Path(r"C:\workspace\world\alakazam-mira-mini\outputs\frozen_codec_eval")
-DIVIDER = 3            # px black divider between the two halves
-LABEL_H = 28          # px label strip height
-BG = (0, 0, 0)
+    real_cap = cv2.VideoCapture(real_path)
+    gen_cap = cv2.VideoCapture(gen_path)
 
+    # Get properties
+    fps = gen_cap.get(cv2.CAP_PROP_FPS)
+    gen_w = int(gen_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    gen_h = int(gen_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    real_w = int(real_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    real_h = int(real_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-def _font(size: int = 20) -> ImageFont.ImageFont:
-    for name in ("arial.ttf", "DejaVuSans.ttf"):
-        try:
-            return ImageFont.truetype(name, size)
-        except OSError:
-            continue
-    return ImageFont.load_default()
+    # Output: side by side
+    out_h = max(gen_h, real_h)
+    out_w = gen_w + real_w + 10  # 10px gap
+    gap = 10
 
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = cv2.VideoWriter(str(output_path), fourcc, fps, (out_w, out_h))
 
-def _label(draw: ImageDraw.ImageDraw, x: int, w: int, text: str, font) -> None:
-    tw = draw.textlength(text, font=font)
-    draw.text((x + (w - tw) / 2, 4), text, fill=(255, 255, 255), font=font)
+    frame_count = 0
+    while True:
+        ret_real, real_frame = real_cap.read()
+        ret_gen, gen_frame = gen_cap.read()
 
+        if not ret_real or not ret_gen:
+            break
 
-def make_split(inp: Path, rec: Path, out: Path, font) -> None:
-    a = Image.open(inp).convert("RGB")
-    b = Image.open(rec).convert("RGB")
-    # match heights (recon may differ slightly)
-    if a.size != b.size:
-        b = b.resize(a.size, Image.Resampling.LANCZOS)
-    w, h = a.size
-    canvas = Image.new("RGB", (w * 2 + DIVIDER, h + LABEL_H), BG)
-    canvas.paste(a, (0, LABEL_H))
-    canvas.paste(b, (w + DIVIDER, LABEL_H))
-    draw = ImageDraw.Draw(canvas)
-    _label(draw, 0, w, "ORIGINAL", font)
-    _label(draw, w + DIVIDER, w, "ENCODED", font)
-    canvas.save(out)
-    print(f"  wrote {out}")
+        # Resize to consistent height
+        real_frame = cv2.resize(real_frame, (real_w, out_h))
+        gen_frame = cv2.resize(gen_frame, (gen_w, out_h))
 
+        # Create combined frame
+        combined = cv2.hconcat([real_frame, cv2.cvtColor(cv2.cvtColor(gen_frame, cv2.COLOR_RGB2BGR), cv2.COLOR_BGR2RGB)])
+        combined = cv2.copyMakeBorder(combined, 0, 0, 0, gap, cv2.BORDER_CONSTANT, value=(50, 50, 50))
 
-def main() -> int:
-    d = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_DIR
-    if not d.is_dir():
-        print(f"ERROR: dir not found: {d}")
-        return 1
-    font = _font(20)
-    inputs = sorted(d.glob("*_input.png"))
-    if not inputs:
-        print(f"no *_input.png in {d}")
-        return 1
-    n = 0
-    for inp in inputs:
-        rec = inp.with_name(inp.name.replace("_input.png", "_recon.png"))
-        if not rec.is_file():
-            print(f"  skip {inp.name}: no matching _recon.png")
-            continue
-        out = inp.with_name(inp.name.replace("_input.png", "_split.png"))
-        make_split(inp, rec, out, font)
-        n += 1
-    print(f"\n{n} split-screen image(s) written to {d}")
-    return 0
+        # Add text labels
+        cv2.putText(combined, "Ground Truth", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+        cv2.putText(combined, "Generated (119000)", (gen_w + gap + 10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 
+        # Resize to output size if needed
+        combined = cv2.resize(combined, (out_w, out_h))
+        writer.write(combined)
+        frame_count += 1
+
+    writer.release()
+    real_cap.release()
+    gen_cap.release()
+
+    print(f"  ✓ {frame_count} frames | Saved: {output_path}")
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    real = "C:/recordings/mira_wds/test/000/dataset_00000/1ea1a4ce-2fdc-44fe-afdd-8019fbacea28_clip00000_c00000.p0.mp4"
+    gen = "outputs/demo_119000_c00000.mp4"
+    out = "outputs/splitscreen_119000_c00000.mp4"
+
+    create_splitscreen(real, gen, out)
+    print(f"\n✅ Full path: {Path(out).absolute()}")

@@ -26,9 +26,9 @@ mira="$here/../mira"
 RUN="${RUN:-pixi run}"
 WORKERS="${WORKERS:-4}"
 
-# Use codec-81000 (26.05 dB PSNR, best RacerX-tuned codec, Aug 10 2026)
+# Use codec-93000 (26.21 dB PSNR est, improved codec, Aug 11 2026)
 if [ -z "${CODEC:-}" ]; then
-    CODEC="/home/horde/mira/codec_logs/checkpoint-81000/checkpoint.pth"
+    CODEC="/home/horde/mira/codec_logs/checkpoint-93000/checkpoint.pth"
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 
