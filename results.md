@@ -9,6 +9,21 @@ Evaluation of MIRA world model inference on real video data with frozen codec ba
 
 ## Codec Checkpoint Measurements
 
+### PSNR Progression: RacerX Domain (Aug 6-10, 2026)
+
+**Complete codec progression on RacerX (8 test clips, 256×256):**
+
+| Checkpoint | Mean PSNR | vs Frozen | Status |
+|---|---|---|---|
+| Frozen (125k) | 19.24 dB | — | Baseline (domain-transferred) |
+| codec_ckpt_54000 | 25.11 dB | +5.87 dB | — |
+| **codec_checkpoint-81000** | **26.05 dB** | **+6.81 dB** | **Best ✓** |
+| Target (RL native) | 28.60 dB | +9.36 dB | Out of reach |
+
+**Key Finding**: codec-81000 achieves **+6.81 dB improvement** over frozen codec by retraining on RacerX data. Still 2.55 dB short of native RL performance (domain transfer ceiling).
+
+**Decision**: Updated all training scripts (train.bat, train.sh, finetune_phase3.sh, finetune.sh) to use codec-81000.
+
 ### PSNR Comparison: codec_ckpt_25000 vs codec_checkpoint-30000 (Aug 6, 2026)
 
 Evaluated on 16 RacerX test clips:
@@ -190,9 +205,38 @@ python scripts/eval_world_model_offline.py C:\workspace\world\alakazam-mira-mini
 
 Result: JSON file in checkpoint's output dir with scalar gFID/gFDD + Fréchet curves.
 
+## Codec Evaluation Summary (Aug 10, 2026)
+
+**Frozen Codec Performance on RacerX:**
+- Frozen (125k) on RacerX: 19.24 dB (domain transfer loss: −9.36 dB vs RL target)
+- codec-54000: 25.11 dB
+- **codec-81000: 26.05 dB** (best, +0.41 dB vs prev best checkpoint-51000)
+
+**Decision**: Use codec-81000 for all training scripts (train.bat, train.sh, finetune_phase3.sh).
+
+## World Model Checkpoint Comparison (Aug 10, 2026)
+
+**checkpoint-119000 vs wm_ckpt_112000 (32 frames at 256×256)**
+
+| Metric | 119000 | 112000 | Δ | Winner |
+|---|---|---|---|---|
+| **FID** | **8.35** | 10.52 | −2.17 | 119000 ✓ |
+| **PSNR** | **23.30 dB** | 22.30 dB | +1.00 dB | 119000 ✓ |
+| **SSIM** | **0.6364** | 0.6353 | +0.0011 | 119000 ✓ |
+| Training Steps | 119,000 | 112,000 | +7k | — |
+
+**Key Findings:**
+- Checkpoint-119000 wins across **all metrics** (FID, PSNR, SSIM)
+- FID improvement: 2.17 points (20% better)
+- PSNR improvement: 1.00 dB (significant at this scale)
+- Generated videos: `frames_119000.mp4`, `frames_112000.mp4`
+- Model convergence plateau: 112k→119k shows marginal training gains
+
+**Decision**: Use **checkpoint-119000** as warm-start for Phase 3 finetuning.
+
 ## Next Steps
-1. ✓ Validate WM training plateau (98k is best)
-2. **Start Phase 1**: Codec training (50k-100k steps) to improve PSNR from 23.7→27+ dB
-3. **Phase 3**: Finetune WM with new codec (150k steps)
-4. Complete Wan2.1 model download for HyDRA (~10-20 GB)
-5. Run HyDRA inference test
+1. ✓ Validate WM training plateau (now at 119k, best observed)
+2. ✓ Codec improvement: codec-81000 (26.05 dB, +6.81 dB vs frozen)
+3. **Pending**: gFID/gFDD evaluation on both checkpoints
+4. **Phase 3**: Finetune WM with codec-81000 (use checkpoint-119000 as warm-start)
+5. Complete Wan2.1 model download for HyDRA (~10-20 GB)
