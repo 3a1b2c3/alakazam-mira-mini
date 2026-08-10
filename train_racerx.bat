@@ -20,10 +20,9 @@ if not exist "%REC%\train\index.json" ( echo ERROR: no RacerX train index at %RE
 set "TESTIDX=%RECF%/train/index.json"
 if exist "%REC%\test\index.json" ( set "TESTIDX=%RECF%/test/index.json" & echo eval on held-out test split ) else ( echo NOTE: no test split -- eval reuses train ^(run holdout_wds.py^) )
 
-REM frozen codec from the mira-mini HF snapshot (globbed -> no hardcoded snapshot hash)
-set "CODEC="
-for /d %%S in ("%USERPROFILE%\.cache\huggingface\hub\models--alakazamworld--mira-mini\snapshots\*") do if exist "%%S\codec\checkpoint-125000\checkpoint.pth" set "CODEC=%%S\codec\checkpoint-125000\checkpoint.pth"
-if not defined CODEC ( echo ERROR: mira-mini codec not found -- run download_weights.bat 1b & exit /b 1 )
+REM codec checkpoint: codec-81000 (26.05 dB PSNR, best RacerX-tuned codec, Aug 10 2026)
+set "CODEC=C:\workspace\world\alakazam-mira-mini\outputs\codec_checkpoint-81000.pth"
+if not exist "%CODEC%" ( echo ERROR: codec not found at %CODEC% & exit /b 1 )
 set "CODEC=%CODEC:\=/%"
 
 set "STEPS=%~1"

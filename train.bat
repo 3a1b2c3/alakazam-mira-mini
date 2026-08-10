@@ -16,8 +16,8 @@ set "MIRA=%~dp0..\mira"
 cd /d "%MIRA%"
 set "PY=%MIRA%\.venv\Scripts\python.exe"
 
-REM Frozen codec from the downloaded mira-mini bundle (forward slashes for Hydra).
-set "CODEC_CKPT=C:/Users/kschmid/.cache/huggingface/hub/models--alakazamworld--mira-mini/snapshots/19d668ac39814e394ae4a8f698690f761facf437/codec/checkpoint-125000/checkpoint.pth"
+REM Codec checkpoint: codec-81000 (26.05 dB PSNR, best RacerX-tuned codec, Aug 10 2026)
+set "CODEC_CKPT=C:/workspace/world/alakazam-mira-mini/outputs/codec_checkpoint-81000.pth"
 
 if not exist "%MIRA%\data_paths.bat" ( echo ERROR: no data_paths.bat - run get_data.bat first & exit /b 1 )
 call "%MIRA%\data_paths.bat"
