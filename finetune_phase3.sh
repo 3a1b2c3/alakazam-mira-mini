@@ -25,12 +25,14 @@ echo "Warm-starting from: $WM"
 # Best codec from Phase 1: codec-81000 (26.05 dB PSNR, Aug 10 2026)
 export CODEC="/home/horde/mira/codec_logs/checkpoint-81000/checkpoint.pth"
 
-# Conservative finetuning settings
+# Conservative finetuning settings with regularization (weight decay, early stopping)
 export OPT_DEFAULTS=(
     "+optimizer.lr=5e-6"
+    "+optimizer.weight_decay=1e-4"
     "+optimizer.schedule=cosine_warmup"
     "+optimizer.warmup_steps=2000"
     "+model.grad_clip=1.0"
+    "+run.early_stopping_patience=3"
 )
 
 FT_DIR="${FT_DIR:-train_world_model_logs_scratch}"

@@ -26,12 +26,15 @@ fi
 export CODEC="/home/horde/mira/codec_logs/checkpoint-81000/checkpoint.pth"
 
 # Optimizer defaults for stable finetuning (inherited by train.sh)
+# Added regularization: weight decay, early stopping, conservative LR
 # Can override with: ./finetune.sh +optimizer.lr=1e-4 (for faster learning)
 export OPT_DEFAULTS=(
-    "+optimizer.lr=1e-5"
+    "+optimizer.lr=5e-6"
+    "+optimizer.weight_decay=1e-4"
     "+optimizer.schedule=cosine_warmup"
     "+optimizer.warmup_steps=3000"
     "+model.grad_clip=1.0"
+    "+run.early_stopping_patience=3"
 )
 
 # Finetune gets its OWN output dir (-> its own tb + checkpoints), separate from

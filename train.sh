@@ -33,14 +33,17 @@ fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 
 # Optimizer defaults for stable world model training (can be overridden in "$@")
+# Added regularization to prevent overfitting (weight decay, early stopping, conservative LR)
 OPT_DEFAULTS=(
-    "+optimizer.lr=1e-5"
+    "+optimizer.lr=5e-6"
+    "+optimizer.weight_decay=1e-4"
     "+optimizer.schedule=cosine_warmup"
     "+optimizer.warmup_steps=3000"
     "+model.grad_clip=1.0"
-    "run.checkpoint_every=7000"
+    "+run.early_stopping_patience=3"
+    "run.checkpoint_every=1000"
     "run.log_every=50"
-    "validation.downstream_val_every=7000"
+    "validation.downstream_val_every=1000"
 )
 # Examples to override:
 #   ./train.sh +optimizer.lr=5e-5          (lower LR if diverging)
