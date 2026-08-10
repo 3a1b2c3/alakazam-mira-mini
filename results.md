@@ -234,6 +234,40 @@ Result: JSON file in checkpoint's output dir with scalar gFID/gFDD + Fréchet cu
 
 **Decision**: Use **checkpoint-119000** as warm-start for Phase 3 finetuning.
 
+### Extended Comparison: c00001 (Complex Actions, Aug 10, 2026)
+
+**Different result: checkpoint-49000 outperforms 119000 on complex actions**
+
+| Metric | Checkpoint-119000 | Checkpoint-49000 | Winner |
+|---|---|---|---|
+| **PSNR** | 14.69 dB | 15.25 dB | **49000** |
+| **SSIM** | 0.4171 | 0.4359 | **49000** |
+| **FID** | 11.01 | 11.85 | **119000** |
+
+**Key Finding - Metric Disagreement:**
+- Pixel-level (PSNR/SSIM): 49000 wins (+0.56 dB PSNR, +0.0188 SSIM)
+- Perceptual (FID): 119000 wins (−0.84 better FID)
+- Interpretation: 49000 is pixel-accurate (blurry); 119000 has better perceptual features but different artifacts
+
+**Comparison Results:**
+| Clip | PSNR 119000 | PSNR 49000 | FID 119000 | FID 49000 | Better? |
+|---|---|---|---|---|---|
+| c00000 (natural motion) | 23.30 dB | — | 8.35 | — | 119000 |
+| c00001 (complex actions) | 14.69 dB | 15.25 dB | 11.01 | 11.85 | Mixed: PSNR→49000, FID→119000 |
+
+**Interpretation:**
+
+🔴 **Pixel-level (PSNR/SSIM):** Checkpoint-49000 more faithful to original pixels
+🟢 **Perceptual (FID):** Checkpoint-119000 captures semantic features better
+
+**Conclusion:** The metrics **disagree**—49000 is pixel-accurate but 119000 looks more "natural" to human perception. This suggests **different failure modes**:
+- **49000:** Blurry but faithful to pixel values
+- **119000:** Sharper but different artifacts
+
+**Pattern:** Checkpoint-119000 excels on natural motion (c00000, +1.00 dB PSNR, FID 8.35) but struggles with complex action sequences (c00001, −0.56 dB PSNR, FID 11.01). Suggests potential overfitting or mode collapse on specific action types.
+
+**Video:** `splitscreen_119000_vs_49000_c00001.mp4` shows this visually.
+
 ## Next Steps
 1. ✓ Validate WM training plateau (now at 119k, best observed)
 2. ✓ Codec improvement: codec-81000 (26.05 dB, +6.81 dB vs frozen)
