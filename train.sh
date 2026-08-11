@@ -28,7 +28,7 @@ WORKERS="${WORKERS:-4}"
 
 # Use codec-93000 (26.21 dB PSNR est, improved codec, Aug 11 2026)
 if [ -z "${CODEC:-}" ]; then
-    CODEC="/home/horde/mira/codec_logs/checkpoint-93000/checkpoint.pth"
+    CODEC="/home/horde/mira/codec_logs/checkpoint_93000/checkpoint.pth"
 fi
 [ -f "$CODEC" ] || { echo "ERROR: codec not found at $CODEC"; exit 1; }
 

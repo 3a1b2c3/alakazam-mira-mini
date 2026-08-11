@@ -16,8 +16,8 @@ set "MIRA=%~dp0..\mira"
 cd /d "%MIRA%"
 set "PY=%MIRA%\.venv\Scripts\python.exe"
 
-REM Codec checkpoint: codec-81000 (26.05 dB PSNR, best RacerX-tuned codec, Aug 10 2026)
-set "CODEC_CKPT=C:/workspace/world/alakazam-mira-mini/outputs/codec_checkpoint-81000.pth"
+REM Codec checkpoint: codec-93000 (26.21 dB PSNR est, improved codec, Aug 11 2026)
+set "CODEC_CKPT=C:/workspace/world/alakazam-mira-mini/outputs/codec/codec_checkpoint-93000.pth"
 
 if not exist "%MIRA%\data_paths.bat" ( echo ERROR: no data_paths.bat - run get_data.bat first & exit /b 1 )
 call "%MIRA%\data_paths.bat"
@@ -65,5 +65,6 @@ echo.
 
 REM dataloader.num_workers=0 -> load in the main process: no Windows worker-spawn
 REM overhead, and one shard doesn't need parallel readers. Raise it for real runs.
-"%PY%" scripts/train_world_model.py model.architecture.config.codec_checkpoint="%CODEC_CKPT%" dataset.train_index="%TRAIN_INDEX%" dataset.test_index="%TEST_INDEX%" run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers=0 run.log_every=50 validation.downstream_val_every=7000 run.checkpoint_every=7000 run.checkpoint_keep_recent=2 world_model_metrics.num_samples=32 world_model_metrics.dino_max_chunk_size=32 %RESUME_ARG% ++tensorboard.logdir=${run.output_dir}/tb %*
+REM Regularization (weight decay, early stopping, conservative LR) to prevent overfitting
+"%PY%" scripts/train_world_model.py model.architecture.config.codec_checkpoint="%CODEC_CKPT%" dataset.train_index="%TRAIN_INDEX%" dataset.test_index="%TEST_INDEX%" run.batch_size=1 run.compile=false wandb.mode=disabled dataloader.num_workers=0 +optimizer.lr=5e-6 +optimizer.weight_decay=1e-4 +run.early_stopping_patience=3 +model.grad_clip=1.0 run.log_every=50 validation.downstream_val_every=1000 run.checkpoint_every=1000 run.checkpoint_keep_recent=2 world_model_metrics.num_samples=32 world_model_metrics.dino_max_chunk_size=32 %RESUME_ARG% ++tensorboard.logdir=${run.output_dir}/tb %*
 endlocal

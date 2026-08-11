@@ -23,7 +23,7 @@ fi
 [ -n "$WM" ] && [ -f "$WM" ] || { echo "ERROR: warm-start checkpoint-52000 not found (run ./download_weights.sh 1b, or set WM=)"; exit 1; }
 
 # Use codec-93000 (26.21 dB PSNR est, improved codec, Aug 11 2026)
-export CODEC="/home/horde/mira/codec_logs/checkpoint-93000/checkpoint.pth"
+export CODEC="/home/horde/mira/codec_logs/checkpoint_93000/checkpoint.pth"
 
 # Optimizer defaults for stable finetuning (inherited by train.sh)
 # Added regularization: weight decay, early stopping, conservative LR

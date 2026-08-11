@@ -23,7 +23,7 @@ fi
 echo "Warm-starting from: $WM"
 
 # Best codec from Phase 1: codec-93000 (26.21 dB PSNR est, Aug 11 2026)
-export CODEC="/home/horde/mira/codec_logs/checkpoint-93000/checkpoint.pth"
+export CODEC="/home/horde/mira/codec_logs/checkpoint_93000/checkpoint.pth"
 
 # Conservative finetuning settings with regularization (weight decay, early stopping)
 export OPT_DEFAULTS=(
